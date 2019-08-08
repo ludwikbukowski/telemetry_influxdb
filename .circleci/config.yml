@@ -1,0 +1,84 @@
+version: 2.1
+
+orbs:
+  telemetry_metrics_influxdb:
+    commands:
+      install_elixir:
+        parameters:
+          elixir:
+            type: string
+            description: Version of the Elixir package to install
+          otp:
+            type: string
+            description: Version of the Erlang package to install
+        steps:
+        - run:
+            name: Install Elixir
+            command: |
+              wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+              sudo dpkg -i erlang-solutions_1.0_all.deb
+              sudo apt-get update
+              sudo apt-get install -y esl-erlang=<<parameters.otp>> elixir=<<parameters.elixir>>
+              mix local.hex --force
+              mix local.rebar --force
+
+    jobs:
+      build_and_test:
+        parallelism: 1
+        machine:
+          docker_layer_caching: false
+        parameters:
+          elixir:
+            description: Elixir version to used by the job
+            type: string
+          otp:
+            description: OTP release to used by the job
+            type: string
+        working_directory: ~/app
+        steps:
+          - checkout
+          - install_elixir:
+              elixir: <<parameters.elixir>>
+              otp: <<parameters.otp>>
+          - run: mix local.hex --force
+          - run: mix local.rebar --force
+          - restore_cache:
+              keys:
+                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>
+          - restore_cache:
+              keys:
+                - deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+                - deps-<<parameters.elixir>>-<<parameters.otp>>
+          - run: mix deps.get
+          - run: mix dialyzer --halt-exit-status
+          - save_cache:
+              key: dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+              paths:
+              - _build
+          - save_cache:
+              key: deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+              paths:
+              - deps
+          - run: make test
+
+workflows:
+  build_and_test:
+    jobs:
+      - telemetry_metrics_influxdb/build_and_test:
+          name: otp22_iex1_9
+          elixir: 1.9.1-1
+          otp: 1:22.0.7-1
+      - telemetry_metrics_influxdb/build_and_test:
+          name: otp21_iex1_9
+          elixir: 1.9.1-1
+          otp: 1:21.3.8.6-1
+      - telemetry_metrics_influxdb/build_and_test:
+          name: otp21_iex1_8
+          elixir: 1.8.2-1
+          otp: 1:21.3.8.6-1
+      - telemetry_metrics_influxdb/build_and_test:
+          name: otp20_iex1_7
+          elixir: 1.7.4-1
+          otp: 1:20.3.8.22-1
+

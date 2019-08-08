@@ -45,8 +45,8 @@ defmodule TelemetryMetricsInfluxDB.FormatterTest do
   end
 
   test "properly formats the point with string" do
-    assert Formatter.format([:string, :test], %{my_string: "jacknicolson"}) ==
-             "string.test my_string=\"jacknicolson\""
+    assert Formatter.format([:string, :test], %{my_string: "jacknicholson"}) ==
+             "string.test my_string=\"jacknicholson\""
   end
 
   test "properly formats the point with string tag that looks like integer though" do
@@ -57,5 +57,19 @@ defmodule TelemetryMetricsInfluxDB.FormatterTest do
   test "properly formats the point with boolean" do
     assert Formatter.format([:boolean, :test], %{my_boolean: true}) ==
              "boolean.test my_boolean=true"
+  end
+
+  test "properly formats special characters" do
+    assert Formatter.format([:special, :coma], %{field: ",coma"}) ==
+             "special.coma field=\"\\,coma\""
+
+    assert Formatter.format([:special, :equals], %{field: "e=quals"}) ==
+             "special.equals field=\"e\\=quals\""
+
+    assert Formatter.format([:special, :space], %{field: "my space"}) ==
+             "special.space field=\"my\\ space\""
+
+    assert Formatter.format([:special, :quote], %{field: "quote\""}) ==
+             "special.quote field=\"quote\\\"\""
   end
 end
