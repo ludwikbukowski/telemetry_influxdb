@@ -1,4 +1,4 @@
-defmodule TelemetryMetricsInfluxDB.UDP do
+defmodule TelemetryMetricsInfluxDB.UDPSocket do
   @moduledoc false
 
   defstruct [:host, :port, :socket]

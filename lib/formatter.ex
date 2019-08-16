@@ -1,4 +1,6 @@
 defmodule TelemetryMetricsInfluxDB.Formatter do
+  @moduledoc false
+
   @type tags() :: map()
   @type event_name() :: [atom()]
   @type event_measurements :: map()

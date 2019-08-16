@@ -1,7 +1,10 @@
-defmodule TelemetryMetricsInfluxDB.EventHandlerUDP do
+defmodule TelemetryMetricsInfluxDB.EventHandler.UDP do
+  @moduledoc false
+
   alias TelemetryMetricsInfluxDB.Formatter
   import HTTPoison.Response
-  alias TelemetryMetricsInfluxDB.UDP
+  alias TelemetryMetricsInfluxDB, as: InfluxDB
+  alias TelemetryMetricsInfluxDB.UDPSocket
   require Logger
 
   @spec attach(InfluxDB.event_spec, InfluxDB.pid(), InfluxDB.handler_config()) :: [InfluxDB.handler_id()]
@@ -27,7 +30,7 @@ defmodule TelemetryMetricsInfluxDB.EventHandlerUDP do
     event_tags = Map.get(metadata, :tags, %{})
     packet = Formatter.format(event, measurements, Map.merge(config.tags, event_tags)) <> "\n"
 
-    case UDP.send(udp, packet) do
+    case UDPSocket.send(udp, packet) do
       :ok ->
         :ok
 

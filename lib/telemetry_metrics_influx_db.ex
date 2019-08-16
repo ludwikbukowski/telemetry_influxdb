@@ -1,5 +1,5 @@
 defmodule TelemetryMetricsInfluxDB do
-  alias TelemetryMetricsInfluxDB.{EventHandlerHTTP, EventHandlerUDP, UDP}
+  alias TelemetryMetricsInfluxDB.{EventHandler.HTTP, EventHandler.UDP, UDPSocket}
   require Logger
 
   @default_port 8086
@@ -40,13 +40,13 @@ defmodule TelemetryMetricsInfluxDB do
   end
 
   @doc false
-  @spec get_udp(pid()) :: UDP.t()
+  @spec get_udp(pid()) :: UDPSocket.t()
   def get_udp(reporter) do
     GenServer.call(reporter, :get_udp)
   end
 
   @doc false
-  @spec udp_error(pid(), UDP.t(), reason :: term) :: :ok
+  @spec udp_error(pid(), UDPSocket.t(), reason :: term) :: :ok
   def udp_error(reporter, udp, reason) do
     GenServer.cast(reporter, {:udp_error, udp, reason})
   end
@@ -65,15 +65,15 @@ defmodule TelemetryMetricsInfluxDB do
 
   defp init_http(config) do
     config = %{config | port: :erlang.integer_to_binary(config.port)}
-    handler_ids = EventHandlerHTTP.attach(config.events, self(), config)
+    handler_ids = EventHandler.HTTP.attach(config.events, self(), config)
 
     {:ok, Map.merge(config, %{handler_ids: handler_ids})}
   end
 
   defp init_udp(config) do
-    case UDP.open(:erlang.binary_to_list(config.host), config.port) do
+    case UDPSocket.open(:erlang.binary_to_list(config.host), config.port) do
       {:ok, udp} ->
-        handler_ids = EventHandlerUDP.attach(config.events, self(), config)
+        handler_ids = EventHandler.UDP.attach(config.events, self(), config)
         {:ok, Map.merge(config, %{udp: udp, handler_ids: handler_ids})}
 
       {:error, reason} ->
@@ -81,8 +81,8 @@ defmodule TelemetryMetricsInfluxDB do
     end
   end
 
-  defp handler_module(:udp), do: EventHandlerUDP
-  defp handler_module(:http), do: EventHandlerHTTP
+  defp handler_module(:udp), do: EventHandler.UDP
+  defp handler_module(:http), do: EventHandler.HTTP
 
   @impl true
   def handle_info({:EXIT, _pid, reason}, state) do
@@ -98,7 +98,7 @@ defmodule TelemetryMetricsInfluxDB do
   def handle_cast({:udp_error, udp, reason}, %{udp: udp} = state) do
     Logger.error("Failed to publish metrics over UDP: #{inspect(reason)}")
 
-    case UDP.open(state.host, state.port) do
+    case UDPSocket.open(state.host, state.port) do
       {:ok, udp} ->
         {:noreply, %{state | udp: udp}}
 

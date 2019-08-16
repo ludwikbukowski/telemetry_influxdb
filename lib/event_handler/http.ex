@@ -1,7 +1,9 @@
-defmodule TelemetryMetricsInfluxDB.EventHandlerHTTP do
+defmodule TelemetryMetricsInfluxDB.EventHandler.HTTP do
+  @moduledoc false
+
   alias TelemetryMetricsInfluxDB.Formatter
   import HTTPoison.Response
-  alias TelemetryMetricsInfluxDB, as InfluxDB
+  alias TelemetryMetricsInfluxDB, as: InfluxDB
   require Logger
 
   @spec attach(InfluxDB.event_spec, pid(), InfluxDB.handler_config()) :: [InfluxDB.handler_id()]
