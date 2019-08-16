@@ -1,6 +1,8 @@
 defmodule TelemetryMetricsInfluxDB.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :telemetry_metrics_influxdb,
@@ -10,6 +12,7 @@ defmodule TelemetryMetricsInfluxDB.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       preferred_cli_env: preferred_cli_env(),
       deps: deps(),
+      docs: docs(),
       description: description(),
       package: package()
     ]
@@ -38,8 +41,18 @@ defmodule TelemetryMetricsInfluxDB.MixProject do
       {:telemetry, "~> 0.4.0"},
       {:jason, "~> 1.0"},
       {:httpoison, "~> 1.5"},
-      {:eventually, git: "https://github.com/distributed-owls/eventually"},
-      {:dialyxir, "~> 0.5", only: :test, runtime: false}
+      {:eventually, git: "https://github.com/distributed-owls/eventually", only: :test,},
+      {:dialyxir, "~> 0.5", only: :test, runtime: false},
+      {:ex_doc, "~> 0.19", only: :docs}
+    ]
+  end
+
+  defp docs do
+    [
+      main: "TelemetryMetricsInfluxDB",
+      canonical: "http://hexdocs.pm/telemetry_metrics_influxdb",
+      source_url: "https://github.com/ludwikbukowski/telemetry_metrics_influxdb",
+      source_ref: "v#{@version}"
     ]
   end
 

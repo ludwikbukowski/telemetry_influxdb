@@ -16,6 +16,12 @@ defmodule TelemetryMetricsInfluxDB do
   @type options :: [option]
   @type event :: %{required(:name) => :telemetry.event_name()}
   @type tags :: map()
+  @type event_spec() :: map()
+  @type event_name() :: [atom()]
+  @type event_measurements :: map()
+  @type event_metadata :: map()
+  @type handler_config :: term()
+  @type handler_id() :: term()
 
   @spec start_link(options) :: GenServer.on_start()
   def start_link(options) do

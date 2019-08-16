@@ -1,16 +1,10 @@
 defmodule TelemetryMetricsInfluxDB.EventHandlerHTTP do
   alias TelemetryMetricsInfluxDB.Formatter
   import HTTPoison.Response
+  alias TelemetryMetricsInfluxDB, as InfluxDB
   require Logger
 
-  @type event_spec() :: map()
-  @type event_name() :: [atom()]
-  @type event_measurements :: map()
-  @type event_metadata :: map()
-  @type handler_config :: term()
-  @type handler_id() :: term()
-
-  @spec attach(event_spec, pid(), handler_config()) :: [handler_id()]
+  @spec attach(InfluxDB.event_spec, pid(), InfluxDB.handler_config()) :: [InfluxDB.handler_id()]
   def attach(event_specs, reporter, db_config) do
     Enum.map(event_specs, fn e ->
       handler_id = handler_id(e.name, reporter)
@@ -19,8 +13,7 @@ defmodule TelemetryMetricsInfluxDB.EventHandlerHTTP do
     end)
   end
 
-  @spec handle_event(event_name(), event_measurements(), event_metadata(), handler_config()) ::
-          :ok
+  @spec handle_event(InfluxDB.event_name(), InfluxDB.event_measurements(), InfluxDB.event_metadata(), InfluxDB.handler_config()) :: :ok
   def handle_event(event, measurements, metadata, config) do
     query = config.host <> ":" <> config.port <> "/write?db=" <> config.db
     event_tags = Map.get(metadata, :tags, %{})
@@ -32,7 +25,7 @@ defmodule TelemetryMetricsInfluxDB.EventHandlerHTTP do
     process_response(HTTPoison.post(query, body, headers))
   end
 
-  @spec detach([handler_id()]) :: :ok
+  @spec detach([InfluxDB.handler_id()]) :: :ok
   def detach(handler_ids) do
     for handler_id <- handler_ids do
       :telemetry.detach(handler_id)
@@ -41,7 +34,7 @@ defmodule TelemetryMetricsInfluxDB.EventHandlerHTTP do
     :ok
   end
 
-  @spec handler_id(event_name(), reporter :: pid) :: handler_id()
+  @spec handler_id(InfluxDB.event_name(), reporter :: pid) :: InfluxDB.handler_id()
   defp handler_id(event_name, reporter) do
     {__MODULE__, reporter, event_name}
   end
