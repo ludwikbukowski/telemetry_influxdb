@@ -1,13 +1,14 @@
-defmodule TelemetryMetricsInfluxDB.Connector.UDP do
+defmodule TelemetryMetricsInfluxDB.UDP.Connector do
   require Logger
-  alias TelemetryMetricsInfluxDB.{EventHandler, UDPSocket}
+  alias TelemetryMetricsInfluxDB.UDP.EventHandler
+  alias TelemetryMetricsInfluxDB.UDP.Socket
 
   def init(config) do
     Process.flag(:trap_exit, true)
 
-    case UDPSocket.open(:erlang.binary_to_list(config.host), config.port) do
+    case Socket.open(:erlang.binary_to_list(config.host), config.port) do
       {:ok, udp} ->
-        handler_ids = EventHandler.UDP.attach(config.events, self(), config)
+        handler_ids = EventHandler.attach(config.events, self(), config)
         {:ok, Map.merge(config, %{udp: udp, handler_ids: handler_ids})}
 
       {:error, reason} ->
@@ -16,13 +17,13 @@ defmodule TelemetryMetricsInfluxDB.Connector.UDP do
   end
 
   @doc false
-  @spec get_udp(pid()) :: UDPSocket.t()
+  @spec get_udp(pid()) :: Socket.t()
   def get_udp(reporter) do
     GenServer.call(reporter, :get_udp)
   end
 
   @doc false
-  @spec udp_error(pid(), UDPSocket.t(), reason :: term) :: :ok
+  @spec udp_error(pid(), Socket.t(), reason :: term) :: :ok
   def udp_error(reporter, udp, reason) do
     GenServer.cast(reporter, {:udp_error, udp, reason})
   end
@@ -38,7 +39,7 @@ defmodule TelemetryMetricsInfluxDB.Connector.UDP do
   def handle_cast({:udp_error, udp, reason}, %{udp: udp} = state) do
     Logger.error("Failed to publish metrics over UDP: #{inspect(reason)}")
 
-    case UDPSocket.open(state.host, state.port) do
+    case Socket.open(state.host, state.port) do
       {:ok, udp} ->
         {:noreply, %{state | udp: udp}}
 
@@ -53,7 +54,7 @@ defmodule TelemetryMetricsInfluxDB.Connector.UDP do
   end
 
   def terminate(_reason, state) do
-    EventHandler.UDP.detach(state.handler_ids)
+    EventHandler.detach(state.handler_ids)
 
     :ok
   end

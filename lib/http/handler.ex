@@ -1,4 +1,4 @@
-defmodule TelemetryMetricsInfluxDB.EventHandler.HTTP do
+defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
   @moduledoc false
 
   alias TelemetryMetricsInfluxDB.Formatter

@@ -1,6 +1,7 @@
 defmodule TelemetryMetricsInfluxDBTest do
   use ExUnit.Case, async: false
   alias TelemetryMetricsInfluxDB.Test.InfluxSimpleClient
+  alias TelemetryMetricsInfluxDB.UDP
   import ExUnit.CaptureLog
   import Eventually
 
@@ -223,10 +224,10 @@ defmodule TelemetryMetricsInfluxDBTest do
       event = given_event_spec([:some, :event1])
       reporter = start_reporter(:udp, %{events: [event]})
 
-      udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
+      udp = UDP.Connector.get_udp(reporter)
 
       assert capture_log(fn ->
-               TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
+               UDP.Connector.udp_error(reporter, udp, :closed)
                # Can we do better here? We could use `call` instead of `cast` for reporting socket
                # errors.
                Process.sleep(100)
@@ -236,15 +237,15 @@ defmodule TelemetryMetricsInfluxDBTest do
     test "notifying a UDP error for the same socket multiple times generates only one log" do
       event = given_event_spec([:some, :event2])
       reporter = start_reporter(:udp, %{events: [event]})
-      udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
+      udp = UDP.Connector.get_udp(reporter)
 
       assert capture_log(fn ->
-               TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
+               UDP.Connector.udp_error(reporter, udp, :closed)
                Process.sleep(100)
              end) =~ ~r/\[error\] Failed to publish metrics over UDP: :closed/
 
       assert capture_log(fn ->
-               TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
+               UDP.Connector.udp_error(reporter, udp, :closed)
                Process.sleep(100)
              end) == ""
     end
@@ -253,10 +254,10 @@ defmodule TelemetryMetricsInfluxDBTest do
     test "notifying a UDP error and fetching a socket returns a new socket" do
       event = given_event_spec([:some, :event3])
       reporter = start_reporter(:udp, %{events: [event]})
-      udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
+      udp = UDP.Connector.get_udp(reporter)
 
-      TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
-      new_udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
+      UDP.Connector.udp_error(reporter, udp, :closed)
+      new_udp = UDP.Connector.get_udp(reporter)
 
       assert new_udp != udp
     end

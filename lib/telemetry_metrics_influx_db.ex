@@ -1,5 +1,6 @@
 defmodule TelemetryMetricsInfluxDB do
-  alias TelemetryMetricsInfluxDB.Connector
+  alias TelemetryMetricsInfluxDB.HTTP
+  alias TelemetryMetricsInfluxDB.UDP
   require Logger
 
   @moduledoc """
@@ -44,11 +45,11 @@ defmodule TelemetryMetricsInfluxDB do
   end
 
   def start_server(:udp, config) do
-    GenServer.start_link(Connector.UDP, config)
+    GenServer.start_link(UDP.Connector, config)
   end
 
   def start_server(:http, config) do
-    GenServer.start_link(Connector.HTTP, config)
+    GenServer.start_link(HTTP.Connector, config)
   end
 
   def stop(reporter) do
