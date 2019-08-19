@@ -8,7 +8,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
   alias TelemetryMetricsInfluxDB.UDP.Connector
   require Logger
 
-  @spec attach(InfluxDB.event_spec(), InfluxDB.pid(), InfluxDB.handler_config()) :: [
+  @spec attach(InfluxDB.event_spec(), pid(), InfluxDB.handler_config()) :: [
           InfluxDB.handler_id()
         ]
   def attach(event_specs, reporter, db_config) do
