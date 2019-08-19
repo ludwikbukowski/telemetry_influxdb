@@ -6,7 +6,7 @@ defmodule TelemetryMetricsInfluxDB.EventHandler.HTTP do
   alias TelemetryMetricsInfluxDB, as: InfluxDB
   require Logger
 
-  @spec attach(InfluxDB.event_spec, pid(), InfluxDB.handler_config()) :: [InfluxDB.handler_id()]
+  @spec attach(InfluxDB.event_spec(), pid(), InfluxDB.handler_config()) :: [InfluxDB.handler_id()]
   def attach(event_specs, reporter, db_config) do
     Enum.map(event_specs, fn e ->
       handler_id = handler_id(e.name, reporter)
@@ -15,7 +15,12 @@ defmodule TelemetryMetricsInfluxDB.EventHandler.HTTP do
     end)
   end
 
-  @spec handle_event(InfluxDB.event_name(), InfluxDB.event_measurements(), InfluxDB.event_metadata(), InfluxDB.handler_config()) :: :ok
+  @spec handle_event(
+          InfluxDB.event_name(),
+          InfluxDB.event_measurements(),
+          InfluxDB.event_metadata(),
+          InfluxDB.handler_config()
+        ) :: :ok
   def handle_event(event, measurements, metadata, config) do
     query = config.host <> ":" <> config.port <> "/write?db=" <> config.db
     event_tags = Map.get(metadata, :tags, %{})

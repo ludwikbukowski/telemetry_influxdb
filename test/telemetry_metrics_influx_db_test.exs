@@ -9,15 +9,16 @@ defmodule TelemetryMetricsInfluxDBTest do
     username: "myuser",
     password: "mysecretpassword",
     host: "localhost",
+    protocol: :udp,
     port: 8087
   }
-  describe "Invalid reporter configuration" do
+  describe "Invalid reporter configuration - " do
     test "error log message is displayed for invalid influxdb credentials" do
       log =
         capture_log(fn ->
           # given
           event = given_event_spec([:request, :failed])
-          start_reporter(%{events: [event], username: "badguy", password: "wrongpass"})
+          start_reporter(:http, %{events: [event], username: "badguy", password: "wrongpass"})
           # when
           :telemetry.execute([:request, :failed], %{"reason" => "timeout", "retries" => "3"})
         end)
@@ -31,7 +32,7 @@ defmodule TelemetryMetricsInfluxDBTest do
         capture_log(fn ->
           # given
           event = given_event_spec([:users, :count])
-          start_reporter(%{events: [event], db: "yy_postgres"})
+          start_reporter(:http, %{events: [event], db: "yy_postgres"})
           # when
           :telemetry.execute([:users, :count], %{"value" => "30"})
         end)
@@ -41,7 +42,7 @@ defmodule TelemetryMetricsInfluxDBTest do
     end
   end
 
-  describe "Events reported" do
+  describe "Events reported - " do
     for protocol <- [:http, :udp] do
       @tag protocol: protocol
       test "event is reported when specified by its name for #{protocol} API", %{
@@ -217,15 +218,15 @@ defmodule TelemetryMetricsInfluxDBTest do
     end
   end
 
-  describe "UDP error handling" do
+  describe "UDP error handling - " do
     test "notifying a UDP error logs an error" do
       event = given_event_spec([:some, :event1])
       reporter = start_reporter(:udp, %{events: [event]})
 
-      udp = TelemetryMetricsInfluxDB.get_udp(reporter)
+      udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
 
       assert capture_log(fn ->
-               TelemetryMetricsInfluxDB.udp_error(reporter, udp, :closed)
+               TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
                # Can we do better here? We could use `call` instead of `cast` for reporting socket
                # errors.
                Process.sleep(100)
@@ -235,15 +236,15 @@ defmodule TelemetryMetricsInfluxDBTest do
     test "notifying a UDP error for the same socket multiple times generates only one log" do
       event = given_event_spec([:some, :event2])
       reporter = start_reporter(:udp, %{events: [event]})
-      udp = TelemetryMetricsInfluxDB.get_udp(reporter)
+      udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
 
       assert capture_log(fn ->
-               TelemetryMetricsInfluxDB.udp_error(reporter, udp, :closed)
+               TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
                Process.sleep(100)
              end) =~ ~r/\[error\] Failed to publish metrics over UDP: :closed/
 
       assert capture_log(fn ->
-               TelemetryMetricsInfluxDB.udp_error(reporter, udp, :closed)
+               TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
                Process.sleep(100)
              end) == ""
     end
@@ -252,10 +253,10 @@ defmodule TelemetryMetricsInfluxDBTest do
     test "notifying a UDP error and fetching a socket returns a new socket" do
       event = given_event_spec([:some, :event3])
       reporter = start_reporter(:udp, %{events: [event]})
-      udp = TelemetryMetricsInfluxDB.get_udp(reporter)
+      udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
 
-      TelemetryMetricsInfluxDB.udp_error(reporter, udp, :closed)
-      new_udp = TelemetryMetricsInfluxDB.get_udp(reporter)
+      TelemetryMetricsInfluxDB.Connector.UDP.udp_error(reporter, udp, :closed)
+      new_udp = TelemetryMetricsInfluxDB.Connector.UDP.get_udp(reporter)
 
       assert new_udp != udp
     end
@@ -299,29 +300,36 @@ defmodule TelemetryMetricsInfluxDBTest do
   end
 
   defp assert_reported(name, values, tags \\ %{}, config \\ @default_options) do
-    eventually(fn ->
-      q = "SELECT * FROM \"" <> name <> "\" LIMIT 1"
-      res = InfluxSimpleClient.query(config, q)
+    assert record =
+      eventually(fn ->
+        q = "SELECT * FROM \"" <> name <> "\" LIMIT 1"
+        res = InfluxSimpleClient.query(config, q)
 
-      [inner_map] = res["results"]
-      [record] = inner_map["series"]
+        with [inner_map] <- res["results"],
+             [record] <- inner_map["series"] do
+          record
+        else
+          _ -> false
+        end
+      end)
 
-      assert record["name"] == name
-      assert record["columns"] == ["time"] ++ Map.keys(values) ++ Map.keys(tags)
-      map_vals = Map.values(values)
-      map_tag_vals = Map.values(tags)
-      all_vals = map_vals ++ map_tag_vals
+    assert record["name"] == name
+    assert record["columns"] == ["time"] ++ Map.keys(values) ++ Map.keys(tags)
+    map_vals = Map.values(values)
+    map_tag_vals = Map.values(tags)
+    all_vals = map_vals ++ map_tag_vals
 
-      assert [[_ | tag_and_fields]] = record["values"]
-      assert tag_and_fields == all_vals
-    end)
+    assert [[_ | tag_and_fields]] = record["values"]
+    assert tag_and_fields == all_vals
   end
 
   defp start_reporter(:udp, options) do
     start_reporter(Map.merge(options, %{protocol: :udp, port: 8089}))
   end
 
-  defp start_reporter(:http, options), do: start_reporter(options)
+  defp start_reporter(:http, options) do
+    start_reporter(Map.merge(options, %{protocol: :http, port: 8087}))
+  end
 
   defp start_reporter(options) do
     config = Map.merge(@default_options, options)

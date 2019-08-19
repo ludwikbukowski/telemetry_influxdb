@@ -1,8 +1,12 @@
 defmodule TelemetryMetricsInfluxDB do
-  alias TelemetryMetricsInfluxDB.{EventHandler.HTTP, EventHandler.UDP, UDPSocket}
+  alias TelemetryMetricsInfluxDB.Connector
   require Logger
 
+  @moduledoc """
+
+  """
   @default_port 8086
+
   @type option ::
           {:port, :inet.port_number()}
           | {:host, String.t()}
@@ -28,7 +32,7 @@ defmodule TelemetryMetricsInfluxDB do
     config =
       options
       |> Enum.into(%{})
-      |> Map.put_new(:protocol, :http)
+      |> Map.put_new(:protocol, :udp)
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
       |> Map.put_new(:tags, %{})
@@ -36,91 +40,19 @@ defmodule TelemetryMetricsInfluxDB do
       |> validate_event_fields!()
       |> validate_protocol!()
 
-    GenServer.start_link(__MODULE__, config)
+    start_server(config.protocol, config)
   end
 
-  @doc false
-  @spec get_udp(pid()) :: UDPSocket.t()
-  def get_udp(reporter) do
-    GenServer.call(reporter, :get_udp)
+  def start_server(:udp, config) do
+    GenServer.start_link(Connector.UDP, config)
   end
 
-  @doc false
-  @spec udp_error(pid(), UDPSocket.t(), reason :: term) :: :ok
-  def udp_error(reporter, udp, reason) do
-    GenServer.cast(reporter, {:udp_error, udp, reason})
-  end
-
-  def init(config) do
-    Process.flag(:trap_exit, true)
-    init_protocol(config)
-  end
-
-  defp init_protocol(%{protocol: :udp} = config), do: init_udp(config)
-  defp init_protocol(%{protocol: :http} = config), do: init_http(config)
-
-  defp init_protocol(_) do
-    {:stop, :bad_protocol}
-  end
-
-  defp init_http(config) do
-    config = %{config | port: :erlang.integer_to_binary(config.port)}
-    handler_ids = EventHandler.HTTP.attach(config.events, self(), config)
-
-    {:ok, Map.merge(config, %{handler_ids: handler_ids})}
-  end
-
-  defp init_udp(config) do
-    case UDPSocket.open(:erlang.binary_to_list(config.host), config.port) do
-      {:ok, udp} ->
-        handler_ids = EventHandler.UDP.attach(config.events, self(), config)
-        {:ok, Map.merge(config, %{udp: udp, handler_ids: handler_ids})}
-
-      {:error, reason} ->
-        {:error, {:udp_open_failed, reason}}
-    end
-  end
-
-  defp handler_module(:udp), do: EventHandler.UDP
-  defp handler_module(:http), do: EventHandler.HTTP
-
-  @impl true
-  def handle_info({:EXIT, _pid, reason}, state) do
-    {:stop, reason, state}
-  end
-
-  @impl true
-  def handle_call(:get_udp, _from, state) do
-    {:reply, state.udp, state}
-  end
-
-  @impl true
-  def handle_cast({:udp_error, udp, reason}, %{udp: udp} = state) do
-    Logger.error("Failed to publish metrics over UDP: #{inspect(reason)}")
-
-    case UDPSocket.open(state.host, state.port) do
-      {:ok, udp} ->
-        {:noreply, %{state | udp: udp}}
-
-      {:error, reason} ->
-        Logger.error("Failed to reopen UDP socket: #{inspect(reason)}")
-        {:stop, {:udp_open_failed, reason}, state}
-    end
-  end
-
-  def handle_cast({:udp_error, _, _}, state) do
-    {:noreply, state}
+  def start_server(:http, config) do
+    GenServer.start_link(Connector.HTTP, config)
   end
 
   def stop(reporter) do
     GenServer.stop(reporter)
-  end
-
-  @impl true
-  def terminate(_reason, state) do
-    handler_module(state.protocol).detach(state.handler_ids)
-
-    :ok
   end
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts
