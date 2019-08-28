@@ -25,7 +25,7 @@ defmodule TelemetryMetricsInfluxDBTest do
           :telemetry.execute([:request, :failed], %{"reason" => "timeout", "retries" => "3"})
           # I will give 5$ to person who figure out how *not* to use sleep here in *legit way*
           # I tried to achieve that with eventually but I failed
-          :timer.sleep(100)
+          :timer.sleep(300)
         end)
 
       ## then
@@ -44,7 +44,7 @@ defmodule TelemetryMetricsInfluxDBTest do
           :telemetry.execute([:users, :count], %{"value" => "30"})
           # I will give 5$ to person who figure out how *not* to use sleep here in *legit way*
           # I tried to achieve that with eventually but I failed
-          :timer.sleep(100)
+          :timer.sleep(300)
         end)
 
       # then
