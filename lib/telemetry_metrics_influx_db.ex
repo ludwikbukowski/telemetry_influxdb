@@ -71,14 +71,14 @@ defmodule TelemetryMetricsInfluxDB do
   defp http_child_specs(config) do
     [
       %{id: Pool, start: {HTTP.Connector, :start_link, [config]}},
-      %{id: Registry, start: {HTTP.Registry, :start_link, [config]}}
+      %{id: Registry, start: {HTTP.EventHandler, :start_link, [config]}}
     ]
   end
 
   defp udp_child_specs(config) do
     [
       %{id: UDP, start: {UDP.Connector, :start_link, [config]}},
-      %{id: Registry, start: {UDP.Registry, :start_link, [config]}}
+      %{id: Registry, start: {UDP.EventHandler, :start_link, [config]}}
     ]
   end
 

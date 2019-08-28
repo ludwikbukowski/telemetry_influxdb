@@ -1,4 +1,4 @@
-defmodule TelemetryMetricsInfluxDB.HTTP.Registry do
+defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
   require Logger
   alias TelemetryMetricsInfluxDB.HTTP.Connector
 
@@ -46,6 +46,10 @@ defmodule TelemetryMetricsInfluxDB.HTTP.Registry do
     headers =
       Map.merge(authentication_header(config.username, config.password), binary_data_header())
 
+    :wpool.cast(config.pool_name, {__MODULE__, :send_event, [query, body, headers]})
+  end
+
+  def send_event(query, body, headers) do
     process_response(HTTPoison.post(query, body, headers))
   end
 

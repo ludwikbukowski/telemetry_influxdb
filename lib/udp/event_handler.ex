@@ -1,5 +1,4 @@
-defmodule TelemetryMetricsInfluxDB.UDP.Registry do
-  alias TelemetryMetricsInfluxDB.UDP.EventHandler
+defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
   require Logger
 
   @default_workers_num 3
