@@ -15,31 +15,35 @@ defmodule TelemetryMetricsInfluxDBTest do
   }
   describe "Invalid reporter configuration - " do
     test "error log message is displayed for invalid influxdb credentials" do
+      # given
+      event = given_event_spec([:request, :failed])
+      pid = start_reporter(:http, %{events: [event], username: "badguy", password: "wrongpass"})
+
       log =
         capture_log(fn ->
-          # given
-          event = given_event_spec([:request, :failed])
-          start_reporter(:http, %{events: [event], username: "badguy", password: "wrongpass"})
           # when
           :telemetry.execute([:request, :failed], %{"reason" => "timeout", "retries" => "3"})
         end)
 
       # then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
+      stop_reporter(pid)
     end
 
     test "error log message is displayed for invalid influxdb database" do
+      # given
+      event = given_event_spec([:users, :count])
+      pid = start_reporter(:http, %{events: [event], db: "yy_postgres"})
+
       log =
         capture_log(fn ->
-          # given
-          event = given_event_spec([:users, :count])
-          start_reporter(:http, %{events: [event], db: "yy_postgres"})
           # when
           :telemetry.execute([:users, :count], %{"value" => "30"})
         end)
 
       # then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
+      stop_reporter(pid)
     end
   end
 
@@ -51,13 +55,17 @@ defmodule TelemetryMetricsInfluxDBTest do
       } do
         ## given
         event = given_event_spec([:requests, :failed])
-        start_reporter(protocol, %{events: [event]})
+        pid = start_reporter(protocol, %{events: [event]})
 
         ## when
         :telemetry.execute([:requests, :failed], %{"reason" => "timeout", "retries" => 3})
 
         ## then
         assert_reported("requests.failed", %{"reason" => "timeout", "retries" => 3})
+
+        ## cleanup
+        clear_series("requests.failed")
+        stop_reporter(pid)
       end
 
       @tag protocol: protocol
@@ -66,7 +74,7 @@ defmodule TelemetryMetricsInfluxDBTest do
       } do
         ## given
         event = given_event_spec([:calls, :failed])
-        start_reporter(protocol, %{events: [event]})
+        pid = start_reporter(protocol, %{events: [event]})
 
         ## when
         :telemetry.execute([:calls, :failed], %{
@@ -85,6 +93,10 @@ defmodule TelemetryMetricsInfluxDBTest do
           "string" => "random",
           "boolean" => true
         })
+
+        ## cleanup
+        clear_series("calls.failed")
+        stop_reporter(pid)
       end
 
       @tag protocol: protocol
@@ -93,8 +105,7 @@ defmodule TelemetryMetricsInfluxDBTest do
         event1 = given_event_spec([:event, :one])
         event2 = given_event_spec([:event, :two])
         event3 = given_event_spec([:event, :three])
-        start_reporter(protocol, %{events: [event1, event2, event3]})
-
+        pid = start_reporter(protocol, %{events: [event1, event2, event3]})
         ## when
         :telemetry.execute([:event, :one], %{"value" => 1})
         assert_reported("event.one", %{"value" => 1})
@@ -106,6 +117,12 @@ defmodule TelemetryMetricsInfluxDBTest do
 
         ## then
         refute_reported("event.other")
+
+        ## cleanup
+        clear_series("event.one")
+        clear_series("event.two")
+        clear_series("event.other")
+        stop_reporter(pid)
       end
 
       @tag protocol: protocol
@@ -115,10 +132,11 @@ defmodule TelemetryMetricsInfluxDBTest do
         ## given
         event = given_event_spec([:memory, :leak])
 
-        start_reporter(protocol, %{
-          events: [event],
-          tags: %{region: :eu_central, time_zone: :cest}
-        })
+        pid =
+          start_reporter(protocol, %{
+            events: [event],
+            tags: %{region: :eu_central, time_zone: :cest}
+          })
 
         ## when
         :telemetry.execute([:memory, :leak], %{"memory_leaked" => 100})
@@ -128,6 +146,10 @@ defmodule TelemetryMetricsInfluxDBTest do
           "region" => "\"eu_central\"",
           "time_zone" => "\"cest\""
         })
+
+        ## cleanup
+        clear_series("memory.leak")
+        stop_reporter(pid)
       end
 
       @tag protocol: protocol
@@ -136,7 +158,7 @@ defmodule TelemetryMetricsInfluxDBTest do
       } do
         ## given
         event = given_event_spec([:system, :crash])
-        start_reporter(protocol, %{events: [event], tags: %{}})
+        pid = start_reporter(protocol, %{events: [event], tags: %{}})
 
         ## when
         :telemetry.execute([:system, :crash], %{"node_id" => "a3"}, %{tags: %{priority: :high}})
@@ -145,6 +167,10 @@ defmodule TelemetryMetricsInfluxDBTest do
         assert_reported("system.crash", %{"node_id" => "a3"}, %{
           "priority" => "\"high\""
         })
+
+        ## cleanup
+        clear_series("system.crash")
+        stop_reporter(pid)
       end
 
       @tag protocol: protocol
@@ -154,7 +180,7 @@ defmodule TelemetryMetricsInfluxDBTest do
         ## given
         event1 = given_event_spec([:event, :special1])
         event2 = given_event_spec([:event, :special2])
-        start_reporter(protocol, %{events: [event1, event2], tags: %{}})
+        pid = start_reporter(protocol, %{events: [event1, event2], tags: %{}})
 
         ## when
         :telemetry.execute([:event, :special1], %{"equal_sign" => "a=b"}, %{
@@ -169,6 +195,11 @@ defmodule TelemetryMetricsInfluxDBTest do
         })
 
         assert_reported("event.special2", %{"coma_space" => "a\\,b\\ c"}, %{})
+
+        ## cleanup
+        clear_series("event.special1")
+        clear_series("event.special2")
+        stop_reporter(pid)
       end
 
       @tag protocol: protocol
@@ -188,8 +219,10 @@ defmodule TelemetryMetricsInfluxDBTest do
         :telemetry.execute([:new, :event], %{"value" => 2})
 
         ## then
-        assert_reported("old.event", %{"value" => 1})
         refute_reported("new.event")
+
+        ## cleanup
+        clear_series("old.event")
       end
 
       @tag :capture_log
@@ -202,10 +235,12 @@ defmodule TelemetryMetricsInfluxDBTest do
         pid = start_reporter(protocol, %{events: [event_first, event_second]})
 
         Process.unlink(pid)
+        {:links, child_pids} = :erlang.process_info(pid, :links)
 
         # Make sure that event handlers are detached even if non-parent process sends an exit signal.
-        spawn(fn -> Process.exit(pid, :some_reason) end)
-        eventually(fn -> not Process.alive?(pid) end)
+
+        spawn(fn -> Process.exit(pid, :kill) end)
+        wait_processes_to_die(child_pids ++ [pid])
 
         assert :telemetry.list_handlers([:first, :event]) == []
         assert :telemetry.list_handlers([:second, :event]) == []
@@ -219,48 +254,17 @@ defmodule TelemetryMetricsInfluxDBTest do
     end
   end
 
-  describe "UDP error handling - " do
-    test "notifying a UDP error logs an error" do
-      event = given_event_spec([:some, :event1])
-      reporter = start_reporter(:udp, %{events: [event]})
+  @tag :capture_log
+  test "notifying a UDP error and fetching a socket returns a new socket" do
+    event = given_event_spec([:some, :event3])
+    start_reporter(:udp, %{events: [event], tags: %{}})
+    udp = UDP.Connector.get_udp("default")
+    Process.exit(udp.socket, :kill)
 
-      udp = UDP.Connector.get_udp(reporter)
-
-      assert capture_log(fn ->
-               UDP.Connector.udp_error(reporter, udp, :closed)
-               # Can we do better here? We could use `call` instead of `cast` for reporting socket
-               # errors.
-               Process.sleep(100)
-             end) =~ ~r/\[error\] Failed to publish metrics over UDP: :closed/
-    end
-
-    test "notifying a UDP error for the same socket multiple times generates only one log" do
-      event = given_event_spec([:some, :event2])
-      reporter = start_reporter(:udp, %{events: [event]})
-      udp = UDP.Connector.get_udp(reporter)
-
-      assert capture_log(fn ->
-               UDP.Connector.udp_error(reporter, udp, :closed)
-               Process.sleep(100)
-             end) =~ ~r/\[error\] Failed to publish metrics over UDP: :closed/
-
-      assert capture_log(fn ->
-               UDP.Connector.udp_error(reporter, udp, :closed)
-               Process.sleep(100)
-             end) == ""
-    end
-
-    @tag :capture_log
-    test "notifying a UDP error and fetching a socket returns a new socket" do
-      event = given_event_spec([:some, :event3])
-      reporter = start_reporter(:udp, %{events: [event]})
-      udp = UDP.Connector.get_udp(reporter)
-
-      UDP.Connector.udp_error(reporter, udp, :closed)
-      new_udp = UDP.Connector.get_udp(reporter)
-
-      assert new_udp != udp
-    end
+    assert eventually(fn ->
+             new_udp = UDP.Connector.get_udp("default")
+             new_udp != udp
+           end)
   end
 
   test "events are not reported when reporter is shut down by its supervisor" do
@@ -295,24 +299,24 @@ defmodule TelemetryMetricsInfluxDBTest do
   end
 
   defp refute_reported(name, config \\ @default_options) do
-    q = "SELECT * FROM \"" <> name <> "\" LIMIT 1"
+    q = "SELECT * FROM \"" <> name <> "\";"
     res = InfluxSimpleClient.query(config, q)
     assert %{"results" => [%{"statement_id" => 0}]} == res
   end
 
   defp assert_reported(name, values, tags \\ %{}, config \\ @default_options) do
     assert record =
-      eventually(fn ->
-        q = "SELECT * FROM \"" <> name <> "\" LIMIT 1"
-        res = InfluxSimpleClient.query(config, q)
+             eventually(fn ->
+               q = "SELECT * FROM \"" <> name <> "\";"
+               res = InfluxSimpleClient.query(config, q)
 
-        with [inner_map] <- res["results"],
-             [record] <- inner_map["series"] do
-          record
-        else
-          _ -> false
-        end
-      end)
+               with [inner_map] <- res["results"],
+                    [record] <- inner_map["series"] do
+                 record
+               else
+                 _ -> false
+               end
+             end)
 
     assert record["name"] == name
     assert record["columns"] == ["time"] ++ Map.keys(values) ++ Map.keys(tags)
@@ -324,6 +328,16 @@ defmodule TelemetryMetricsInfluxDBTest do
     assert tag_and_fields == all_vals
   end
 
+  defp clear_series(name, config \\ @default_options) do
+    q = "DROP SERIES FROM \"" <> name <> "\";"
+    InfluxSimpleClient.post(config, q)
+
+    eventually(fn ->
+      q = "SELECT * FROM \"" <> name <> "\";"
+      InfluxSimpleClient.query(config, q) == %{"results" => [%{"statement_id" => 0}]}
+    end)
+  end
+
   defp start_reporter(:udp, options) do
     start_reporter(Map.merge(options, %{protocol: :udp, port: 8089}))
   end
@@ -333,8 +347,17 @@ defmodule TelemetryMetricsInfluxDBTest do
   end
 
   defp start_reporter(options) do
+    #  :timer.sleep(2000)
     config = Map.merge(@default_options, options)
     {:ok, pid} = TelemetryMetricsInfluxDB.start_link(config)
     pid
+  end
+
+  defp wait_processes_to_die(pids) do
+    eventually(fn -> Enum.all?(pids, fn p -> not Process.alive?(p) end) end)
+  end
+
+  defp stop_reporter(pid) do
+    TelemetryMetricsInfluxDB.stop(pid)
   end
 end

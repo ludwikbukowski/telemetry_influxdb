@@ -1,6 +1,7 @@
 defmodule TelemetryMetricsInfluxDB do
   alias TelemetryMetricsInfluxDB.HTTP
   alias TelemetryMetricsInfluxDB.UDP
+  alias TelemetryMetricsInfluxDB.Ids.Storage
   require Logger
 
   @moduledoc """
@@ -33,6 +34,7 @@ defmodule TelemetryMetricsInfluxDB do
     config =
       options
       |> Enum.into(%{})
+      |> Map.put_new(:prefix, "default")
       |> Map.put_new(:protocol, :udp)
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
@@ -41,19 +43,43 @@ defmodule TelemetryMetricsInfluxDB do
       |> validate_event_fields!()
       |> validate_protocol!()
 
-    start_server(config.protocol, config)
+    specs = child_specs(config.protocol, config)
+    create_ets(config.prefix)
+    Supervisor.start_link(specs, strategy: :one_for_all)
   end
 
-  def start_server(:udp, config) do
-    GenServer.start_link(UDP.Connector, config)
+  defp create_ets(prefix) do
+    try do
+      :ets.new(table_name(prefix), [:set, :public, :named_table])
+    rescue
+      _ ->
+        :ok
+    end
   end
 
-  def start_server(:http, config) do
-    GenServer.start_link(HTTP.Connector, config)
+  defp table_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_influx_reporter", :utf8)
   end
 
-  def stop(reporter) do
-    GenServer.stop(reporter)
+  def stop(pid) do
+    Supervisor.stop(pid)
+  end
+
+  defp child_specs(:http, config), do: http_child_specs(config)
+  defp child_specs(:udp, config), do: udp_child_specs(config)
+
+  defp http_child_specs(config) do
+    [
+      %{id: Pool, start: {HTTP.Connector, :start_link, [config]}},
+      %{id: Registry, start: {HTTP.Registry, :start_link, [config]}}
+    ]
+  end
+
+  defp udp_child_specs(config) do
+    [
+      %{id: UDP, start: {UDP.Connector, :start_link, [config]}},
+      %{id: Registry, start: {UDP.Registry, :start_link, [config]}}
+    ]
   end
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts

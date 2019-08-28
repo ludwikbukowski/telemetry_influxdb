@@ -1,16 +1,33 @@
-defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
-  @moduledoc false
+defmodule TelemetryMetricsInfluxDB.HTTP.Registry do
+  require Logger
+  alias TelemetryMetricsInfluxDB.HTTP.Connector
+
+  @default_workers_num 3
 
   alias TelemetryMetricsInfluxDB.Formatter
   import HTTPoison.Response
   alias TelemetryMetricsInfluxDB, as: InfluxDB
   require Logger
 
-  @spec attach(InfluxDB.event_spec(), pid(), InfluxDB.handler_config()) :: [InfluxDB.handler_id()]
-  def attach(event_specs, reporter, db_config) do
+  def start_link(config) do
+    GenServer.start_link(__MODULE__, config)
+  end
+
+  def init(config) do
+    config = %{config | port: :erlang.integer_to_binary(config.port)}
+    Process.flag(:trap_exit, true)
+    handler_ids = attach_events(config.events, config)
+
+    {:ok, %{handler_ids: handler_ids}}
+  end
+
+  def attach_events(event_specs, config) do
     Enum.map(event_specs, fn e ->
-      handler_id = handler_id(e.name, reporter)
-      :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, db_config)
+      pool_name = Connector.get_pool(config.prefix)
+      config = Map.put(config, :pool_name, pool_name)
+
+      handler_id = handler_id(e.name)
+      :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
       handler_id
     end)
   end
@@ -32,18 +49,8 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
     process_response(HTTPoison.post(query, body, headers))
   end
 
-  @spec detach([InfluxDB.handler_id()]) :: :ok
-  def detach(handler_ids) do
-    for handler_id <- handler_ids do
-      :telemetry.detach(handler_id)
-    end
-
-    :ok
-  end
-
-  @spec handler_id(InfluxDB.event_name(), reporter :: pid) :: InfluxDB.handler_id()
-  defp handler_id(event_name, reporter) do
-    {__MODULE__, reporter, event_name}
+  def handle_info({:EXIT, _pid, reason}, state) do
+    {:stop, reason, state}
   end
 
   defp process_response({:ok, %HTTPoison.Response{status_code: 204}}), do: :ok
@@ -69,5 +76,18 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
 
   defp binary_data_header() do
     %{"Content-Type" => "text/plain"}
+  end
+
+  def terminate(_reason, state) do
+    for handler_id <- state.handler_ids do
+      :telemetry.detach(handler_id)
+    end
+
+    :ok
+  end
+
+  @spec handler_id(InfluxDB.event_name()) :: InfluxDB.handler_id()
+  defp handler_id(event_name) do
+    {__MODULE__, event_name}
   end
 end

@@ -3,45 +3,47 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
   alias TelemetryMetricsInfluxDB.UDP.EventHandler
   alias TelemetryMetricsInfluxDB.UDP.Socket
 
-  def init(config) do
-    Process.flag(:trap_exit, true)
+  def start_link(config) do
+    GenServer.start_link(__MODULE__, config)
+  end
 
+  def init(config) do
     case Socket.open(:erlang.binary_to_list(config.host), config.port) do
       {:ok, udp} ->
-        handler_ids = EventHandler.attach(config.events, self(), config)
-        {:ok, Map.merge(config, %{udp: udp, handler_ids: handler_ids})}
+        insert_socket(config.prefix, udp)
+        {:ok, config}
 
       {:error, reason} ->
         {:error, {:udp_open_failed, reason}}
     end
   end
 
-  @doc false
-  @spec get_udp(pid()) :: Socket.t()
-  def get_udp(reporter) do
-    GenServer.call(reporter, :get_udp)
+  def get_udp(prefix) do
+    case :ets.lookup(table_name(prefix), "socket") do
+      [{"socket", sock}] -> sock
+      _ -> :no_socket
+    end
   end
 
-  @doc false
-  @spec udp_error(pid(), Socket.t(), reason :: term) :: :ok
   def udp_error(reporter, udp, reason) do
     GenServer.cast(reporter, {:udp_error, udp, reason})
   end
 
-  def handle_info({:EXIT, _pid, reason}, state) do
-    {:stop, reason, state}
+  defp insert_socket(prefix, socket) do
+    :ets.insert(table_name(prefix), {"socket", socket})
   end
 
-  def handle_call(:get_udp, _from, state) do
-    {:reply, state.udp, state}
+  defp table_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_influx_reporter", :utf8)
   end
 
-  def handle_cast({:udp_error, udp, reason}, %{udp: udp} = state) do
+  def handle_cast({:udp_error, udp, reason}, state) do
     Logger.error("Failed to publish metrics over UDP: #{inspect(reason)}")
 
     case Socket.open(state.host, state.port) do
       {:ok, udp} ->
-        {:noreply, %{state | udp: udp}}
+        insert_socket(state.prefix, udp)
+        {:noreply, state}
 
       {:error, reason} ->
         Logger.error("Failed to reopen UDP socket: #{inspect(reason)}")
@@ -51,11 +53,5 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
 
   def handle_cast({:udp_error, _, _}, state) do
     {:noreply, state}
-  end
-
-  def terminate(_reason, state) do
-    EventHandler.detach(state.handler_ids)
-
-    :ok
   end
 end

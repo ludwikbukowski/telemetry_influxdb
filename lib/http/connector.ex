@@ -2,24 +2,37 @@ defmodule TelemetryMetricsInfluxDB.HTTP.Connector do
   alias TelemetryMetricsInfluxDB.HTTP.EventHandler
   require Logger
 
+  @default_workers_num 3
+
+  def start_link(config) do
+    Supervisor.start_link(__MODULE__, config, name: __MODULE__)
+  end
+
   def init(config) do
-    Process.flag(:trap_exit, true)
     config = %{config | port: :erlang.integer_to_binary(config.port)}
-    handler_ids = EventHandler.attach(config.events, self(), config)
 
-    #    child = [{:wpool, :start_pool, [:http_pool, workers: @default_workers_num]}]
-    #    Supervisor.init(child, strategy: :one_for_one)
+    worker_pool_spec = %{
+      id: WorkerPool,
+      start: {:wpool, :start_pool, [:http_pool, [{:workers, 3}]]}
+    }
 
-    {:ok, Map.merge(config, %{handler_ids: handler_ids})}
+    insert_pool(config.prefix, :http_pool)
+
+    Supervisor.init([worker_pool_spec], strategy: :one_for_one)
   end
 
-  def handle_info({:EXIT, _pid, reason}, state) do
-    {:stop, reason, state}
+  def get_pool(prefix) do
+    case :ets.lookup(table_name(prefix), "pool") do
+      [{"pool", sock}] -> sock
+      _ -> :no_pool
+    end
   end
 
-  def terminate(_reason, state) do
-     EventHandler.detach(state.handler_ids)
+  defp insert_pool(prefix, socket) do
+    :ets.insert(table_name(prefix), {"pool", socket})
+  end
 
-    :ok
+  defp table_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_influx_reporter", :utf8)
   end
 end
