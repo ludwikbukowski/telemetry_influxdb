@@ -22,7 +22,7 @@ defmodule TelemetryMetricsInfluxDBTest do
       log =
         capture_log(fn ->
           # when
-          :telemetry.execute([:request, :failed], %{"reason" => "timeout", "retries" => "3"})
+          :telemetry.execute([:request, :failed], %{"user" => "invalid", "password" => "invalid"})
           # I will give 5$ to person who figure out how *not* to use sleep here in *legit way*
           # I tried to achieve that with eventually but I failed
           :timer.sleep(300)
@@ -257,6 +257,50 @@ defmodule TelemetryMetricsInfluxDBTest do
         refute_reported("first.event")
         refute_reported("second.event")
       end
+
+      @tag protocol: protocol
+      test "events are reported from two independed reporters for #{protocol} API", %{
+        protocol: protocol
+      } do
+        ## given
+        event1 = given_event_spec([:servers1, :down])
+        event2 = given_event_spec([:servers2, :down])
+
+        pid1 =
+          start_reporter(protocol, %{
+            events: [event1],
+            tags: %{region: :eu_central, time_zone: :cest},
+            prefix: "eu"
+          })
+
+        pid2 =
+          start_reporter(protocol, %{
+            events: [event2],
+            tags: %{region: :asia, time_zone: :other},
+            prefix: "asia"
+          })
+
+        ## when
+        :telemetry.execute([:servers1, :down], %{"panic?" => "yes"})
+        :telemetry.execute([:servers2, :down], %{"panic?" => "yes"})
+
+        ## then
+        assert_reported("servers1.down", %{"panic?" => "yes"}, %{
+          "region" => "\"eu_central\"",
+          "time_zone" => "\"cest\""
+        })
+
+        assert_reported("servers2.down", %{"panic?" => "yes"}, %{
+          "region" => "\"asia\"",
+          "time_zone" => "\"other\""
+        })
+
+        ## cleanup
+        clear_series("servers1.down")
+        clear_series("servers2.down")
+        stop_reporter(pid1)
+        stop_reporter(pid2)
+      end
     end
   end
 
@@ -345,15 +389,14 @@ defmodule TelemetryMetricsInfluxDBTest do
   end
 
   defp start_reporter(:udp, options) do
-    start_reporter(Map.merge(options, %{protocol: :udp, port: 8089}))
+    start_reporter(Map.merge(%{protocol: :udp, port: 8089}, options))
   end
 
   defp start_reporter(:http, options) do
-    start_reporter(Map.merge(options, %{protocol: :http, port: 8087}))
+    start_reporter(Map.merge(%{protocol: :http, port: 8087}, options))
   end
 
   defp start_reporter(options) do
-    #  :timer.sleep(2000)
     config = Map.merge(@default_options, options)
     {:ok, pid} = TelemetryMetricsInfluxDB.start_link(config)
     pid

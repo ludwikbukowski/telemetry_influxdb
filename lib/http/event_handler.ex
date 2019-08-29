@@ -1,6 +1,6 @@
 defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
   require Logger
-  alias TelemetryMetricsInfluxDB.HTTP.Connector
+  alias TelemetryMetricsInfluxDB.HTTP.Pool
 
   @default_workers_num 3
 
@@ -23,10 +23,10 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
 
   def attach_events(event_specs, config) do
     Enum.map(event_specs, fn e ->
-      pool_name = Connector.get_pool(config.prefix)
+      pool_name = Pool.get_name(config.prefix)
       config = Map.put(config, :pool_name, pool_name)
 
-      handler_id = handler_id(e.name)
+      handler_id = handler_id(e.name, config.prefix)
       :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
       handler_id
     end)
@@ -90,8 +90,8 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
     :ok
   end
 
-  @spec handler_id(InfluxDB.event_name()) :: InfluxDB.handler_id()
-  defp handler_id(event_name) do
-    {__MODULE__, event_name}
+  @spec handler_id(InfluxDB.event_name(), binary()) :: InfluxDB.handler_id()
+  defp handler_id(event_name, prefix) do
+    {__MODULE__, event_name, prefix}
   end
 end

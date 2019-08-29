@@ -26,7 +26,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
   def attach_events(event_specs, config) do
     handler_ids =
       Enum.map(event_specs, fn e ->
-        handler_id = handler_id(e.name)
+        handler_id = handler_id(e.name, config.prefix)
         :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
         handler_id
       end)
@@ -64,8 +64,8 @@ defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
     :ok
   end
 
-  @spec handler_id(InfluxDB.event_name()) :: InfluxDB.handler_id()
-  defp handler_id(event_name) do
-    {__MODULE__, event_name}
+  @spec handler_id(InfluxDB.event_name(), binary()) :: InfluxDB.handler_id()
+  defp handler_id(event_name, prefix) do
+    {__MODULE__, event_name, prefix}
   end
 end

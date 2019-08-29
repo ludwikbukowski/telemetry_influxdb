@@ -43,8 +43,8 @@ defmodule TelemetryMetricsInfluxDB do
       |> validate_event_fields!()
       |> validate_protocol!()
 
-    specs = child_specs(config.protocol, config)
     create_ets(config.prefix)
+    specs = child_specs(config.protocol, config)
     Supervisor.start_link(specs, strategy: :one_for_all)
   end
 
@@ -70,15 +70,15 @@ defmodule TelemetryMetricsInfluxDB do
 
   defp http_child_specs(config) do
     [
-      %{id: Pool, start: {HTTP.Connector, :start_link, [config]}},
-      %{id: Registry, start: {HTTP.EventHandler, :start_link, [config]}}
+      HTTP.Pool.child_spec(config),
+      %{id: HTTP.Handler, start: {HTTP.EventHandler, :start_link, [config]}}
     ]
   end
 
   defp udp_child_specs(config) do
     [
-      %{id: UDP, start: {UDP.Connector, :start_link, [config]}},
-      %{id: Registry, start: {UDP.EventHandler, :start_link, [config]}}
+      %{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}},
+      %{id: UDP.Handler, start: {UDP.EventHandler, :start_link, [config]}}
     ]
   end
 

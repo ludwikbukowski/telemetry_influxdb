@@ -10,6 +10,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
   def init(config) do
     case Socket.open(:erlang.binary_to_list(config.host), config.port) do
       {:ok, udp} ->
+        delete_old_socket(config.prefix)
         insert_socket(config.prefix, udp)
         {:ok, config}
 
@@ -31,6 +32,10 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
 
   defp insert_socket(prefix, socket) do
     :ets.insert(table_name(prefix), {"socket", socket})
+  end
+
+  defp delete_old_socket(prefix) do
+    :ets.delete(table_name(prefix), "socket")
   end
 
   defp table_name(prefix) do
