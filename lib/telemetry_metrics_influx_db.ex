@@ -26,7 +26,7 @@ defmodule TelemetryMetricsInfluxDB do
   @type event_name() :: [atom()]
   @type event_measurements :: map()
   @type event_metadata :: map()
-  @type handler_config :: term()
+  @type config :: map()
   @type handler_id() :: term()
 
   @spec start_link(options) :: GenServer.on_start()

@@ -9,6 +9,7 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
   alias TelemetryMetricsInfluxDB, as: InfluxDB
   require Logger
 
+  @spec start_link(InfluxDB.config()) :: GenServer.on_start()
   def start_link(config) do
     GenServer.start_link(__MODULE__, config)
   end
@@ -21,6 +22,7 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
     {:ok, %{handler_ids: handler_ids}}
   end
 
+  @spec attach_events(InfluxDB.event_spec(), InfluxDB.config()) :: list(InfluxDB.handler_id())
   def attach_events(event_specs, config) do
     Enum.map(event_specs, fn e ->
       pool_name = Pool.get_name(config.prefix)
@@ -36,7 +38,7 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
           InfluxDB.event_name(),
           InfluxDB.event_measurements(),
           InfluxDB.event_metadata(),
-          InfluxDB.handler_config()
+          InfluxDB.config()
         ) :: :ok
   def handle_event(event, measurements, metadata, config) do
     query = config.host <> ":" <> config.port <> "/write?db=" <> config.db

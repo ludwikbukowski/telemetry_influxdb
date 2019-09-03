@@ -2,6 +2,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
   require Logger
   alias TelemetryMetricsInfluxDB.UDP.Socket
 
+  @spec start_link(InfluxDB.config()) :: GenServer.on_start()
   def start_link(config) do
     GenServer.start_link(__MODULE__, config)
   end
@@ -18,6 +19,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
     end
   end
 
+  @spec get_udp(binary()) :: Socket.t()
   def get_udp(prefix) do
     case :ets.lookup(table_name(prefix), "socket") do
       [{"socket", sock}] -> sock
@@ -25,6 +27,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.Connector do
     end
   end
 
+  @spec udp_error(pid(), Socket.t(), term()) :: :ok
   def udp_error(reporter, udp, reason) do
     GenServer.cast(reporter, {:udp_error, udp, reason})
   end

@@ -3,6 +3,7 @@ defmodule TelemetryMetricsInfluxDB.HTTP.Pool do
 
   @default_workers_num 3
 
+  @spec child_spec(InfluxDB.config()) :: Supervisor.child_spec()
   def child_spec(config) do
     config = %{config | port: :erlang.integer_to_binary(config.port)}
 
