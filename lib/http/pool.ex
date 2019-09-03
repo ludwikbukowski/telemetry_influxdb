@@ -6,8 +6,8 @@ defmodule TelemetryMetricsInfluxDB.HTTP.Pool do
   def child_spec(config) do
     config = %{config | port: :erlang.integer_to_binary(config.port)}
 
-    delete_old_pool(config.prefix)
-    insert_pool(config.prefix, pool_name(config.prefix))
+    delete_old_pool_ets(config.prefix)
+    insert_pool_ets(config.prefix, pool_name(config.prefix))
 
     %{
       id: pool_name(config.prefix),
@@ -26,11 +26,11 @@ defmodule TelemetryMetricsInfluxDB.HTTP.Pool do
     end
   end
 
-  defp insert_pool(prefix, socket) do
+  defp insert_pool_ets(prefix, socket) do
     :ets.insert(table_name(prefix), {"pool", socket})
   end
 
-  defp delete_old_pool(prefix) do
+  defp delete_old_pool_ets(prefix) do
     :ets.delete(table_name(prefix), "pool")
   end
 
