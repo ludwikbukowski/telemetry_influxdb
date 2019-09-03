@@ -18,38 +18,53 @@ defmodule TelemetryMetricsInfluxDBTest do
       # given
       event = given_event_spec([:request, :failed])
       pid = start_reporter(:http, %{events: [event], username: "badguy", password: "wrongpass"})
+      testpid = self()
+
+      :meck.new(TelemetryMetricsInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+
+      :meck.expect(TelemetryMetricsInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+        res = :meck.passthrough([q, b, h])
+        send(testpid, :event_sent)
+        res
+      end)
 
       log =
         capture_log(fn ->
           # when
           :telemetry.execute([:request, :failed], %{"user" => "invalid", "password" => "invalid"})
-          # I will give 5$ to person who figure out how *not* to use sleep here in *legit way*
-          # I tried to achieve that with eventually but I failed
-          :timer.sleep(300)
+          assert_receive :event_sent, 200
         end)
 
       ## then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
+      :meck.unload(TelemetryMetricsInfluxDB.HTTP.EventHandler)
     end
 
     test "error log message is displayed for invalid influxdb database" do
       # given
       event = given_event_spec([:users, :count])
       pid = start_reporter(:http, %{events: [event], db: "yy_postgres"})
+      testpid = self()
+      :meck.new(TelemetryMetricsInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+
+      :meck.expect(TelemetryMetricsInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+        res = :meck.passthrough([q, b, h])
+        send(testpid, :event_sent)
+        res
+      end)
 
       log =
         capture_log(fn ->
           # when
           :telemetry.execute([:users, :count], %{"value" => "30"})
-          # I will give 5$ to person who figure out how *not* to use sleep here in *legit way*
-          # I tried to achieve that with eventually but I failed
-          :timer.sleep(300)
+          assert_receive :event_sent, 200
         end)
 
       # then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
+      :meck.unload(TelemetryMetricsInfluxDB.HTTP.EventHandler)
     end
   end
 
