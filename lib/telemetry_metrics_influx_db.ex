@@ -1,12 +1,71 @@
 defmodule TelemetryMetricsInfluxDB do
-  alias TelemetryMetricsInfluxDB.{EventHandler.HTTP, EventHandler.UDP, UDPSocket}
+  alias TelemetryMetricsInfluxDB.HTTP
+  alias TelemetryMetricsInfluxDB.UDP
   require Logger
 
+  @moduledoc """
+  `Telemetry` reporter for InfluxDB compatibile events.
+
+  To use it, start the reporter with the `start_link/1` function, providing it a list of
+  `Telemetry` event names:
+
+
+      TelemetryMetricsStatsd.start_link(
+        events: [
+          %{name: [:memory, :usage]},
+          %{name: [:http, :request]},
+        ]
+      )
+
+  > Note that in the real project the reporter should be started under a supervisor, e.g. the main
+  > supervisor of your application.
+
+  By default the reporter sends events through UDP to localhost:8086.
+
+  Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
+  whenever a relevant Telemetry event is emitted.
+
+  #### Configuration
+
+  Possibile options for the reporter:
+      * `reporter_name` - unique name for the reporter. The purpose is to distinguish between different reporters running in the system.
+      One can run separate independent InfluxDB reporters, with different configurations and goals.
+      * `protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp.
+      * `host` - host, where InfluxDB is running.
+      * `port` - port, where InfluxDB is running.
+      * `db` - name of InfluxDB's  instance.
+      * `username` - username of InfluxDB's user that has writes privileges.
+      * `password` - password for the user.
+      * `events` - list of `Telemetry` events' names that we want to send to InfluxDB.
+      Each event should be specified by the map with the field `name`, e.g %{name: [:sample, :event, :name]}.
+      Event names should be compatibile with `Telemetry` events' format.
+      * `tags` - list of global tags, that will be attached to each reported event. The format is a map,
+      where the key and the value are tag's name and value, respectively.
+      Both tag's name and the value could be atoms or binaries.
+
+  #### Notes
+
+  For the HTTP protocol, (worker_pool)[https://github.com/inaka/worker_pool] is used for sending requests asynchronously.
+  Therefore the HTTP requests are sent in context of the separate workers pool, which does not block client's application
+  (it is not send in the critical path of the client's process).
+  The events are sent straightaway without any batching techniques.
+  On the other hand, UDP packets are sent in context of the processes that execute the events.
+  However, the lightweight nature of UDP should not cause any bottlenecks in such a solution.
+
+  Once the reporter is started, it is attached to specified `Telemetry` events.
+  The events are deteached when the reporter is shutdown.
+  Multiple
+
+
+  """
+
   @default_port 8086
+
   @type option ::
           {:port, :inet.port_number()}
           | {:host, String.t()}
           | {:protocol, atom()}
+          | {:reporter_name, binary()}
           | {:db, String.t()}
           | {:username, String.t()}
           | {:password, String.t()}
@@ -20,7 +79,7 @@ defmodule TelemetryMetricsInfluxDB do
   @type event_name() :: [atom()]
   @type event_measurements :: map()
   @type event_metadata :: map()
-  @type handler_config :: term()
+  @type config :: map()
   @type handler_id() :: term()
 
   @spec start_link(options) :: GenServer.on_start()
@@ -28,7 +87,8 @@ defmodule TelemetryMetricsInfluxDB do
     config =
       options
       |> Enum.into(%{})
-      |> Map.put_new(:protocol, :http)
+      |> Map.put_new(:reporter_name, "default")
+      |> Map.put_new(:protocol, :udp)
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
       |> Map.put_new(:tags, %{})
@@ -36,91 +96,43 @@ defmodule TelemetryMetricsInfluxDB do
       |> validate_event_fields!()
       |> validate_protocol!()
 
-    GenServer.start_link(__MODULE__, config)
+    create_ets(config.reporter_name)
+    specs = child_specs(config.protocol, config)
+    Supervisor.start_link(specs, strategy: :one_for_all)
   end
 
-  @doc false
-  @spec get_udp(pid()) :: UDPSocket.t()
-  def get_udp(reporter) do
-    GenServer.call(reporter, :get_udp)
-  end
-
-  @doc false
-  @spec udp_error(pid(), UDPSocket.t(), reason :: term) :: :ok
-  def udp_error(reporter, udp, reason) do
-    GenServer.cast(reporter, {:udp_error, udp, reason})
-  end
-
-  def init(config) do
-    Process.flag(:trap_exit, true)
-    init_protocol(config)
-  end
-
-  defp init_protocol(%{protocol: :udp} = config), do: init_udp(config)
-  defp init_protocol(%{protocol: :http} = config), do: init_http(config)
-
-  defp init_protocol(_) do
-    {:stop, :bad_protocol}
-  end
-
-  defp init_http(config) do
-    config = %{config | port: :erlang.integer_to_binary(config.port)}
-    handler_ids = EventHandler.HTTP.attach(config.events, self(), config)
-
-    {:ok, Map.merge(config, %{handler_ids: handler_ids})}
-  end
-
-  defp init_udp(config) do
-    case UDPSocket.open(:erlang.binary_to_list(config.host), config.port) do
-      {:ok, udp} ->
-        handler_ids = EventHandler.UDP.attach(config.events, self(), config)
-        {:ok, Map.merge(config, %{udp: udp, handler_ids: handler_ids})}
-
-      {:error, reason} ->
-        {:error, {:udp_open_failed, reason}}
+  defp create_ets(prefix) do
+    try do
+      :ets.new(table_name(prefix), [:set, :public, :named_table])
+    rescue
+      _ ->
+        :ok
     end
   end
 
-  defp handler_module(:udp), do: EventHandler.UDP
-  defp handler_module(:http), do: EventHandler.HTTP
-
-  @impl true
-  def handle_info({:EXIT, _pid, reason}, state) do
-    {:stop, reason, state}
+  defp table_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_influx_reporter", :utf8)
   end
 
-  @impl true
-  def handle_call(:get_udp, _from, state) do
-    {:reply, state.udp, state}
+  def stop(pid) do
+    Supervisor.stop(pid)
   end
 
-  @impl true
-  def handle_cast({:udp_error, udp, reason}, %{udp: udp} = state) do
-    Logger.error("Failed to publish metrics over UDP: #{inspect(reason)}")
+  defp child_specs(:http, config), do: http_child_specs(config)
+  defp child_specs(:udp, config), do: udp_child_specs(config)
 
-    case UDPSocket.open(state.host, state.port) do
-      {:ok, udp} ->
-        {:noreply, %{state | udp: udp}}
-
-      {:error, reason} ->
-        Logger.error("Failed to reopen UDP socket: #{inspect(reason)}")
-        {:stop, {:udp_open_failed, reason}, state}
-    end
+  defp http_child_specs(config) do
+    [
+      HTTP.Pool.child_spec(config),
+      %{id: HTTP.Handler, start: {HTTP.EventHandler, :start_link, [config]}}
+    ]
   end
 
-  def handle_cast({:udp_error, _, _}, state) do
-    {:noreply, state}
-  end
-
-  def stop(reporter) do
-    GenServer.stop(reporter)
-  end
-
-  @impl true
-  def terminate(_reason, state) do
-    handler_module(state.protocol).detach(state.handler_ids)
-
-    :ok
+  defp udp_child_specs(config) do
+    [
+      %{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}},
+      %{id: UDP.Handler, start: {UDP.EventHandler, :start_link, [config]}}
+    ]
   end
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts

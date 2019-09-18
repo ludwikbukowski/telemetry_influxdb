@@ -1,0 +1,44 @@
+defmodule TelemetryMetricsInfluxDB.HTTP.Pool do
+  require Logger
+  alias TelemetryMetricsInfluxDB, as: InfluxDB
+
+  @default_workers_num 3
+
+  @spec child_spec(InfluxDB.config()) :: Supervisor.child_spec()
+  def child_spec(config) do
+    config = %{config | port: :erlang.integer_to_binary(config.port)}
+
+    delete_old_pool_ets(config.reporter_name)
+    insert_pool_ets(config.reporter_name, pool_name(config.reporter_name))
+
+    %{
+      id: pool_name(config.reporter_name),
+      start:
+        {:wpool, :start_pool,
+         [pool_name(config.reporter_name), [{:workers, @default_workers_num}]]}
+    }
+  end
+
+  defp pool_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_WorkerPool", :utf8)
+  end
+
+  def get_name(prefix) do
+    case :ets.lookup(table_name(prefix), "pool") do
+      [{"pool", sock}] -> sock
+      _ -> :no_pool
+    end
+  end
+
+  defp insert_pool_ets(prefix, socket) do
+    :ets.insert(table_name(prefix), {"pool", socket})
+  end
+
+  defp delete_old_pool_ets(prefix) do
+    :ets.delete(table_name(prefix), "pool")
+  end
+
+  defp table_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_influx_reporter", :utf8)
+  end
+end
