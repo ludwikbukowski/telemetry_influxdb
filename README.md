@@ -5,18 +5,19 @@ InfluxDB reporter for Telemetry
 
   To use it, start the reporter with the `start_link/1` function, providing it a list of
   `Telemetry` event names:
-    ```
-      TelemetryMetricsStatsd.start_link(
+
+  ```elixir
+      TelemetryMetricsInfluxDB.start_link(
         events: [
           %{name: [:memory, :usage]},
           %{name: [:http, :request]},
         ]
       )
-    ```
+  ```
 
   or put it under a supervisor:
 
-  ```
+  ```elixir
   children = [
     {TelemetryMetricsInfluxDB, [
       events:  events: [

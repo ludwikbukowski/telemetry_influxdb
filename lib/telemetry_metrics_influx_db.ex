@@ -10,7 +10,7 @@ defmodule TelemetryMetricsInfluxDB do
   `Telemetry` event names:
 
 
-      TelemetryMetricsStatsd.start_link(
+      TelemetryMetricsInfluxDB.start_link(
         events: [
           %{name: [:memory, :usage]},
           %{name: [:http, :request]},
