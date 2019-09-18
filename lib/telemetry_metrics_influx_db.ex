@@ -45,7 +45,7 @@ defmodule TelemetryMetricsInfluxDB do
 
   #### Notes
 
-  For the HTTP protocol, (worker_pool)[https://github.com/inaka/worker_pool] is used for sending requests asynchronously.
+  For the HTTP protocol, [worker_pool](https://github.com/inaka/worker_pool) is used for sending requests asynchronously.
   Therefore the HTTP requests are sent in context of the separate workers pool, which does not block client's application
   (it is not send in the critical path of the client's process).
   The events are sent straightaway without any batching techniques.
