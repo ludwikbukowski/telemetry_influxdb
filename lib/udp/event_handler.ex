@@ -28,7 +28,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
   def attach_events(event_specs, config) do
     handler_ids =
       Enum.map(event_specs, fn e ->
-        handler_id = handler_id(e.name, config.prefix)
+        handler_id = handler_id(e.name, config.reporter_name)
         :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
         handler_id
       end)
@@ -41,7 +41,7 @@ defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
           InfluxDB.config()
         ) :: :ok
   def handle_event(event, measurements, metadata, config) do
-    udp = Connector.get_udp(config.prefix)
+    udp = Connector.get_udp(config.reporter_name)
     event_tags = Map.get(metadata, :tags, %{})
     packet = Formatter.format(event, measurements, Map.merge(config.tags, event_tags)) <> "\n"
 

@@ -32,7 +32,7 @@ defmodule TelemetryMetricsInfluxDBTest do
         capture_log(fn ->
           # when
           :telemetry.execute([:request, :failed], %{"user" => "invalid", "password" => "invalid"})
-          assert_receive :event_sent, 200
+          assert_receive :event_sent, 500
         end)
 
       ## then
@@ -285,14 +285,14 @@ defmodule TelemetryMetricsInfluxDBTest do
           start_reporter(protocol, %{
             events: [event1],
             tags: %{region: :eu_central, time_zone: :cest},
-            prefix: "eu"
+            reporter_name: "eu"
           })
 
         pid2 =
           start_reporter(protocol, %{
             events: [event2],
             tags: %{region: :asia, time_zone: :other},
-            prefix: "asia"
+            reporter_name: "asia"
           })
 
         ## when
