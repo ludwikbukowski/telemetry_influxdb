@@ -2,8 +2,6 @@ defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
   require Logger
   alias TelemetryMetricsInfluxDB.HTTP.Pool
 
-  @default_workers_num 3
-
   alias TelemetryMetricsInfluxDB.Formatter
   import HTTPoison.Response
   alias TelemetryMetricsInfluxDB, as: InfluxDB

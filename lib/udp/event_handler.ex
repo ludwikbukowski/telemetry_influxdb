@@ -26,12 +26,11 @@ defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
 
   @spec attach_events(InfluxDB.event_spec(), InfluxDB.config()) :: list(InfluxDB.handler_id())
   def attach_events(event_specs, config) do
-    handler_ids =
-      Enum.map(event_specs, fn e ->
-        handler_id = handler_id(e.name, config.reporter_name)
-        :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
-        handler_id
-      end)
+    Enum.map(event_specs, fn e ->
+      handler_id = handler_id(e.name, config.reporter_name)
+      :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
+      handler_id
+    end)
   end
 
   @spec handle_event(
