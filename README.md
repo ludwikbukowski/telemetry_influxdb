@@ -1,4 +1,4 @@
-# telemetry_metrics_influxdb
+# telemetry_influxdb
 InfluxDB reporter for Telemetry
 
 `Telemetry` reporter for InfluxDB compatibile events.
@@ -7,7 +7,7 @@ InfluxDB reporter for Telemetry
   `Telemetry` event names:
 
   ```elixir
-      TelemetryMetricsInfluxDB.start_link(
+      TelemetryInfluxDB.start_link(
         events: [
           %{name: [:memory, :usage]},
           %{name: [:http, :request]},
@@ -19,7 +19,7 @@ InfluxDB reporter for Telemetry
 
   ```elixir
   children = [
-    {TelemetryMetricsInfluxDB, [
+    {TelemetryInfluxDB, [
       events:  events: [
         %{name: [:memory, :usage]},
         %{name: [:http, :request]}
@@ -43,9 +43,9 @@ It should setup the latest InfluxDB in docker and run all the tests against it.
 
 ## Copyright and License
 
-TelemetryMetricsInfluxDB is copyright (c) 2019 Ludwik Bukowski.
+TelemetryInfluxDB is copyright (c) 2019 Ludwik Bukowski.
 
-TelemetryMetricsInfluxDB source code is released under MIT license.
+TelemetryInfluxDB source code is released under MIT license.
 
 See [LICENSE](LICENSE) for more information.
 

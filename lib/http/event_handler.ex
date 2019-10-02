@@ -1,10 +1,10 @@
-defmodule TelemetryMetricsInfluxDB.HTTP.EventHandler do
+defmodule TelemetryInfluxDB.HTTP.EventHandler do
   require Logger
-  alias TelemetryMetricsInfluxDB.HTTP.Pool
+  alias TelemetryInfluxDB.HTTP.Pool
 
-  alias TelemetryMetricsInfluxDB.Formatter
+  alias TelemetryInfluxDB.Formatter
   import HTTPoison.Response
-  alias TelemetryMetricsInfluxDB, as: InfluxDB
+  alias TelemetryInfluxDB, as: InfluxDB
   require Logger
 
   @spec start_link(InfluxDB.config()) :: GenServer.on_start()

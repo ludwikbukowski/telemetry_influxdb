@@ -1,6 +1,6 @@
-defmodule TelemetryMetricsInfluxDB do
-  alias TelemetryMetricsInfluxDB.HTTP
-  alias TelemetryMetricsInfluxDB.UDP
+defmodule TelemetryInfluxDB do
+  alias TelemetryInfluxDB.HTTP
+  alias TelemetryInfluxDB.UDP
   require Logger
 
   @moduledoc """
@@ -10,7 +10,7 @@ defmodule TelemetryMetricsInfluxDB do
   `Telemetry` event names:
 
 
-      TelemetryMetricsInfluxDB.start_link(
+      TelemetryInfluxDB.start_link(
         events: [
           %{name: [:memory, :usage]},
           %{name: [:http, :request]},
@@ -54,7 +54,6 @@ defmodule TelemetryMetricsInfluxDB do
 
   Once the reporter is started, it is attached to specified `Telemetry` events.
   The events are deteached when the reporter is shutdown.
-  Multiple
 
 
   """

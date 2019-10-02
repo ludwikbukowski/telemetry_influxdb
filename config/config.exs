@@ -11,11 +11,11 @@ import_config "#{Mix.env()}.exs"
 
 # You can configure your application as:
 #
-#     config :telemetry_metrics_influxdb, key: :value
+#     config :telemetry_influxdb, key: :value
 #
 # and access this configuration in your application as:
 #
-#     Application.get_env(:telemetry_metrics_influxdb, :key)
+#     Application.get_env(:telemetry_influxdb, :key)
 #
 # You can also configure a third-party app:
 #

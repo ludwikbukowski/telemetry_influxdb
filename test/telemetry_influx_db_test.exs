@@ -1,7 +1,7 @@
-defmodule TelemetryMetricsInfluxDBTest do
+defmodule TelemetryInfluxDBTest do
   use ExUnit.Case, async: false
-  alias TelemetryMetricsInfluxDB.Test.InfluxSimpleClient
-  alias TelemetryMetricsInfluxDB.UDP
+  alias TelemetryInfluxDB.Test.InfluxSimpleClient
+  alias TelemetryInfluxDB.UDP
   import ExUnit.CaptureLog
   import Eventually
 
@@ -20,9 +20,9 @@ defmodule TelemetryMetricsInfluxDBTest do
       pid = start_reporter(:http, %{events: [event], username: "badguy", password: "wrongpass"})
       testpid = self()
 
-      :meck.new(TelemetryMetricsInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+      :meck.new(TelemetryInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
 
-      :meck.expect(TelemetryMetricsInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+      :meck.expect(TelemetryInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
         res = :meck.passthrough([q, b, h])
         send(testpid, :event_sent)
         res
@@ -38,7 +38,7 @@ defmodule TelemetryMetricsInfluxDBTest do
       ## then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
-      :meck.unload(TelemetryMetricsInfluxDB.HTTP.EventHandler)
+      :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
     end
 
     test "error log message is displayed for invalid influxdb database" do
@@ -46,9 +46,9 @@ defmodule TelemetryMetricsInfluxDBTest do
       event = given_event_spec([:users, :count])
       pid = start_reporter(:http, %{events: [event], db: "yy_postgres"})
       testpid = self()
-      :meck.new(TelemetryMetricsInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+      :meck.new(TelemetryInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
 
-      :meck.expect(TelemetryMetricsInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+      :meck.expect(TelemetryInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
         res = :meck.passthrough([q, b, h])
         send(testpid, :event_sent)
         res
@@ -64,7 +64,7 @@ defmodule TelemetryMetricsInfluxDBTest do
       # then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
-      :meck.unload(TelemetryMetricsInfluxDB.HTTP.EventHandler)
+      :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
     end
   end
 
@@ -236,7 +236,7 @@ defmodule TelemetryMetricsInfluxDBTest do
         assert_reported("old.event", %{"value" => 1})
 
         ## when
-        TelemetryMetricsInfluxDB.stop(pid)
+        TelemetryInfluxDB.stop(pid)
         :telemetry.execute([:new, :event], %{"value" => 2})
 
         ## then
@@ -340,7 +340,7 @@ defmodule TelemetryMetricsInfluxDBTest do
     {:ok, supervisor} =
       Supervisor.start_link(
         [
-          Supervisor.Spec.worker(TelemetryMetricsInfluxDB, child_opts)
+          Supervisor.Spec.worker(TelemetryInfluxDB, child_opts)
         ],
         strategy: :one_for_one
       )
@@ -413,7 +413,7 @@ defmodule TelemetryMetricsInfluxDBTest do
 
   defp start_reporter(options) do
     config = Map.merge(@default_options, options)
-    {:ok, pid} = TelemetryMetricsInfluxDB.start_link(config)
+    {:ok, pid} = TelemetryInfluxDB.start_link(config)
     pid
   end
 
@@ -422,6 +422,6 @@ defmodule TelemetryMetricsInfluxDBTest do
   end
 
   defp stop_reporter(pid) do
-    TelemetryMetricsInfluxDB.stop(pid)
+    TelemetryInfluxDB.stop(pid)
   end
 end

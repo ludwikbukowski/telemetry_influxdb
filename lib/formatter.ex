@@ -1,4 +1,4 @@
-defmodule TelemetryMetricsInfluxDB.Formatter do
+defmodule TelemetryInfluxDB.Formatter do
   @moduledoc false
 
   @type tags() :: map()

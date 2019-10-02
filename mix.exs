@@ -1,11 +1,11 @@
-defmodule TelemetryMetricsInfluxDB.MixProject do
+defmodule TelemetryInfluxDB.MixProject do
   use Mix.Project
 
   @version "0.1.0"
 
   def project do
     [
-      app: :telemetry_metrics_influxdb,
+      app: :telemetry_influxdb,
       version: "0.1.0",
       elixir: "~> 1.7",
       start_permanent: Mix.env() == :prod,
@@ -51,9 +51,9 @@ defmodule TelemetryMetricsInfluxDB.MixProject do
 
   defp docs do
     [
-      main: "TelemetryMetricsInfluxDB",
-      canonical: "http://hexdocs.pm/telemetry_metrics_influxdb",
-      source_url: "https://github.com/ludwikbukowski/telemetry_metrics_influxdb",
+      main: "TelemetryInfluxDB",
+      canonical: "http://hexdocs.pm/telemetry_influxdb",
+      source_url: "https://github.com/ludwikbukowski/telemetry_influxdb",
       source_ref: "v#{@version}"
     ]
   end
@@ -68,7 +68,7 @@ defmodule TelemetryMetricsInfluxDB.MixProject do
     [
       maintainers: ["Ludwik Bukowski"],
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/ludwikbukowski/telemetry_metrics_influxdb"}
+      links: %{"GitHub" => "https://github.com/ludwikbukowski/telemetry_influxdb"}
     ]
   end
 end

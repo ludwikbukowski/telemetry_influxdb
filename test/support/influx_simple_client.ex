@@ -1,4 +1,4 @@
-defmodule TelemetryMetricsInfluxDB.Test.InfluxSimpleClient do
+defmodule TelemetryInfluxDB.Test.InfluxSimpleClient do
   def query(config, query) do
     url_encoded = URI.encode_query(%{"q" => query})
 

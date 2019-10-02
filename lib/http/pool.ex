@@ -1,6 +1,6 @@
-defmodule TelemetryMetricsInfluxDB.HTTP.Pool do
+defmodule TelemetryInfluxDB.HTTP.Pool do
   require Logger
-  alias TelemetryMetricsInfluxDB, as: InfluxDB
+  alias TelemetryInfluxDB, as: InfluxDB
 
   @default_workers_num 3
 

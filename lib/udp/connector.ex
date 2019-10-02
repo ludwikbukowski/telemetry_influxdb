@@ -1,7 +1,7 @@
-defmodule TelemetryMetricsInfluxDB.UDP.Connector do
+defmodule TelemetryInfluxDB.UDP.Connector do
   require Logger
-  alias TelemetryMetricsInfluxDB.UDP.Socket
-  alias TelemetryMetricsInfluxDB, as: InfluxDB
+  alias TelemetryInfluxDB.UDP.Socket
+  alias TelemetryInfluxDB, as: InfluxDB
 
   @spec start_link(InfluxDB.config()) :: GenServer.on_start()
   def start_link(config) do

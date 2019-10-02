@@ -1,6 +1,6 @@
-defmodule TelemetryMetricsInfluxDB.FormatterTest do
+defmodule TelemetryInfluxDB.FormatterTest do
   use ExUnit.Case, async: true
-  alias TelemetryMetricsInfluxDB.Formatter
+  alias TelemetryInfluxDB.Formatter
 
   test "formats the point given atomized fields map" do
     assert Formatter.format([:sunny, :day], %{temperature: 30, wind: :low}) ==

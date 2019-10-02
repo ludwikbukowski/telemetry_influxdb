@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  telemetry_metrics_influxdb:
+  telemetry_influxdb:
     commands:
       install_elixir:
         parameters:
@@ -65,19 +65,19 @@ orbs:
 workflows:
   build_and_test:
     jobs:
-      - telemetry_metrics_influxdb/build_and_test:
+      - telemetry_influxdb/build_and_test:
           name: otp22_iex1_9
           elixir: 1.9.1-1
           otp: 1:22.0.7-1
-      - telemetry_metrics_influxdb/build_and_test:
+      - telemetry_influxdb/build_and_test:
           name: otp21_iex1_9
           elixir: 1.9.1-1
           otp: 1:21.3.8.6-1
-      - telemetry_metrics_influxdb/build_and_test:
+      - telemetry_influxdb/build_and_test:
           name: otp21_iex1_8
           elixir: 1.8.2-1
           otp: 1:21.3.8.6-1
-      - telemetry_metrics_influxdb/build_and_test:
+      - telemetry_influxdb/build_and_test:
           name: otp21_iex1_8
           elixir: 1.7.4-1
           otp: 1:21.3.8.6-1

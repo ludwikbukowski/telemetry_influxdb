@@ -1,13 +1,12 @@
-defmodule TelemetryMetricsInfluxDB.UDP.EventHandler do
+defmodule TelemetryInfluxDB.UDP.EventHandler do
   require Logger
 
-  @default_workers_num 3
 
-  alias TelemetryMetricsInfluxDB.Formatter
+  alias TelemetryInfluxDB.Formatter
   import HTTPoison.Response
-  alias TelemetryMetricsInfluxDB, as: InfluxDB
-  alias TelemetryMetricsInfluxDB.UDP.Socket
-  alias TelemetryMetricsInfluxDB.UDP.Connector
+  alias TelemetryInfluxDB, as: InfluxDB
+  alias TelemetryInfluxDB.UDP.Socket
+  alias TelemetryInfluxDB.UDP.Connector
   require Logger
 
   @spec start_link(InfluxDB.config()) :: GenServer.on_start()
