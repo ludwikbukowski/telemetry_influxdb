@@ -1,4 +1,5 @@
 defmodule TelemetryInfluxDB.UDP.Connector do
+  @moduledoc false
   require Logger
   alias TelemetryInfluxDB.UDP.Socket
   alias TelemetryInfluxDB, as: InfluxDB

@@ -1,4 +1,5 @@
 defmodule TelemetryInfluxDB.UDP.EventHandler do
+  @moduledoc false
   require Logger
 
   alias TelemetryInfluxDB.Formatter

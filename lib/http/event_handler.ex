@@ -1,4 +1,5 @@
 defmodule TelemetryInfluxDB.HTTP.EventHandler do
+  @moduledoc false
   require Logger
   alias TelemetryInfluxDB.HTTP.Pool
 
