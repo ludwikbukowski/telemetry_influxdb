@@ -45,7 +45,7 @@ defmodule TelemetryInfluxDB.MixProject do
       {:meck, git: "https://github.com/eproxus/meck", only: :test},
       {:dialyxir, "~> 0.5", only: :test, runtime: false},
       {:worker_pool, "~> 4.0.0"},
-      {:ex_doc, "~> 0.19", only: :docs}
+      {:ex_doc, "~> 0.19", only: :dev, runtime: false}
     ]
   end
 
