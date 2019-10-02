@@ -1,7 +1,6 @@
 defmodule TelemetryInfluxDB.UDP.EventHandler do
   require Logger
 
-
   alias TelemetryInfluxDB.Formatter
   import HTTPoison.Response
   alias TelemetryInfluxDB, as: InfluxDB

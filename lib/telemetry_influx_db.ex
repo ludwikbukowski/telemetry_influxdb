@@ -4,29 +4,29 @@ defmodule TelemetryInfluxDB do
   require Logger
 
   @moduledoc """
- `Telemetry` reporter for InfluxDB compatible events.
+  `Telemetry` reporter for InfluxDB compatible events.
 
- To use it, start the reporter with the `start_link/1` function, providing it a list of
- `Telemetry` event names:
-```elixir
+  To use it, start the reporter with the `start_link/1` function, providing it a list of
+  `Telemetry` event names:
+  ```elixir
      TelemetryMetricsInfluxDB.start_link(
        events: [
          %{name: [:memory, :usage]},
          %{name: [:http, :request]},
        ]
      )
-```
- > Note that in the real project the reporter should be started under a supervisor, e.g. the main
- > supervisor of your application.
+  ```
+  > Note that in the real project the reporter should be started under a supervisor, e.g. the main
+  > supervisor of your application.
 
- By default, the reporter sends events through UDP to localhost:8086.
+  By default, the reporter sends events through UDP to localhost:8086.
 
- Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
- whenever a relevant Telemetry event is emitted.
+  Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
+  whenever a relevant Telemetry event is emitted.
 
- #### Configuration
+  #### Configuration
 
- Possible options for the reporter:
+  Possible options for the reporter:
      * `:reporter_name` - unique name for the reporter. The purpose is to distinguish between different reporters running in the system.
      One can run separate independent InfluxDB reporters, with different configurations and goals.
      * `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp.
@@ -42,17 +42,17 @@ defmodule TelemetryInfluxDB do
      where the key and the value are tag's name and value, respectively.
      Both the tag's name and the value could be atoms or binaries.
 
- #### Notes
+  #### Notes
 
- For the HTTP protocol, [worker_pool](https://github.com/inaka/worker_pool) is used for sending requests asynchronously.
- Therefore the HTTP requests are sent in the context of the separate workers' pool, which does not block the client's application
- (it is not sent in the critical path of the client's process).
- The events are sent straightaway without any batching techniques.
- On the other hand, UDP packets are sent in the context of the processes that execute the events.
- However, the lightweight nature of UDP should not cause any bottlenecks in such a solution.
+  For the HTTP protocol, [worker_pool](https://github.com/inaka/worker_pool) is used for sending requests asynchronously.
+  Therefore the HTTP requests are sent in the context of the separate workers' pool, which does not block the client's application
+  (it is not sent in the critical path of the client's process).
+  The events are sent straightaway without any batching techniques.
+  On the other hand, UDP packets are sent in the context of the processes that execute the events.
+  However, the lightweight nature of UDP should not cause any bottlenecks in such a solution.
 
- Once the reporter is started, it is attached to specified `Telemetry` events.
- The events are detached when the reporter is shutdown.
+  Once the reporter is started, it is attached to specified `Telemetry` events.
+  The events are detached when the reporter is shutdown.
 
   """
 
