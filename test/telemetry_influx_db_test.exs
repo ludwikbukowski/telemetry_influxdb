@@ -66,6 +66,16 @@ defmodule TelemetryInfluxDBTest do
       stop_reporter(pid)
       :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
     end
+
+    test "error log message is displayed for missing db for HTTP" do
+      assert_raise(ArgumentError, fn ->
+        @default_options
+        |> Map.delete(:db)
+        |> Map.put(:protocol, :http)
+        |> Map.put(:events, [given_event_spec([:missing, :db])])
+        |> start_reporter()
+      end)
+    end
   end
 
   describe "Events reported - " do
@@ -404,16 +414,22 @@ defmodule TelemetryInfluxDBTest do
   end
 
   defp start_reporter(:udp, options) do
-    start_reporter(Map.merge(%{protocol: :udp, port: 8089}, options))
+    @default_options
+    |> Map.delete(:db)
+    |> Map.merge(%{protocol: :udp, port: 8089})
+    |> Map.merge(options)
+    |> start_reporter()
   end
 
   defp start_reporter(:http, options) do
-    start_reporter(Map.merge(%{protocol: :http, port: 8087}, options))
+    @default_options
+    |> Map.merge(%{protocol: :http, port: 8087})
+    |> Map.merge(options)
+    |> start_reporter()
   end
 
   defp start_reporter(options) do
-    config = Map.merge(@default_options, options)
-    {:ok, pid} = TelemetryInfluxDB.start_link(config)
+    {:ok, pid} = TelemetryInfluxDB.start_link(options)
     pid
   end
 
