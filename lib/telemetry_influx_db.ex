@@ -19,7 +19,7 @@ defmodule TelemetryInfluxDB do
   > Note that in the real project the reporter should be started under a supervisor, e.g. the main
   > supervisor of your application.
 
-  By default, the reporter sends events through UDP to localhost:8086.
+  By default, the reporter sends events through UDP to localhost:8089.
 
   Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
   whenever a relevant Telemetry event is emitted.
@@ -56,7 +56,7 @@ defmodule TelemetryInfluxDB do
 
   """
 
-  @default_port 8086
+  @default_port 8089
 
   @type option ::
           {:port, :inet.port_number()}
@@ -89,9 +89,10 @@ defmodule TelemetryInfluxDB do
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
       |> Map.put_new(:tags, %{})
-      |> validate_required!([:db, :events])
+      |> validate_required!([:events])
       |> validate_event_fields!()
       |> validate_protocol!()
+      |> validate_db!()
 
     create_ets(config.reporter_name)
     specs = child_specs(config.protocol, config)
@@ -137,6 +138,13 @@ defmodule TelemetryInfluxDB do
 
   defp validate_protocol!(_) do
     raise(ArgumentError, "protocol has to be :udp or :http")
+  end
+
+  defp validate_db!(%{protocol: :udp} = opts), do: opts
+  defp validate_db!(%{protocol: :http, db: _db} = opts), do: opts
+
+  defp validate_db!(_) do
+    raise(ArgumentError, "for http protocol you need to specify :db field")
   end
 
   defp validate_event_fields!(%{events: []}) do

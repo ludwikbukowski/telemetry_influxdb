@@ -29,7 +29,7 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
   Supervisor.start_link(children, ...)
   ```
 
-  By default the reporter sends events through UDP to localhost:8086.
+  By default the reporter sends events through UDP to localhost:8089.
 
   Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
   whenever a relevant Telemetry event is emitted.
