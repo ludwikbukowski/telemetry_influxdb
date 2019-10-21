@@ -19,7 +19,7 @@ defmodule TelemetryInfluxDB do
   > Note that in the real project the reporter should be started under a supervisor, e.g. the main
   > supervisor of your application.
 
-  By default, the reporter sends events through UDP to localhost:8086.
+  By default, the reporter sends events through UDP to localhost:8089.
 
   Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
   whenever a relevant Telemetry event is emitted.
@@ -56,7 +56,7 @@ defmodule TelemetryInfluxDB do
 
   """
 
-  @default_port 8086
+  @default_port 8089
 
   @type option ::
           {:port, :inet.port_number()}
