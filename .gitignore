@@ -18,3 +18,8 @@ erl_crash.dump
 
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
+
+/error*.log
+
+# Token created during provisioning for InfluxDB v2; used only for tests.
+/.token

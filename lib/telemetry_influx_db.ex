@@ -27,15 +27,15 @@ defmodule TelemetryInfluxDB do
   #### Configuration
 
   Possible options for the reporter:
+
+  Options for any InfluxDB version:
+     * `:version` - :v1 or :v2. The version of InfluxDB to use; defaults to :v1 if not provided
      * `:reporter_name` - unique name for the reporter. The purpose is to distinguish between different reporters running in the system.
      One can run separate independent InfluxDB reporters, with different configurations and goals.
-     * `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp.
+     * `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp. InfluxDB v2 only supports :http for now.
      * `:host` - host, where InfluxDB is running.
      * `:port` - port, where InfluxDB is running.
-     * `:db` - name of InfluxDB's  instance.
-     * `:username` - username of InfluxDB's user that has writes privileges.
-     * `:password` - password for the user.
-     *`:events` - list of `Telemetry` events' names that we want to send to InfluxDB.
+     * `:events` - list of `Telemetry` events' names that we want to send to InfluxDB.
      Each event should be specified by the map with the field `name`, e.g. %{name: [:sample, :event, :name]}.
      Event names should be compatible with `Telemetry` events' format.
      It is also possible to specify an optional list of metadata keys that will be included in the event body and sent to InfluxDB as tags.
@@ -43,6 +43,16 @@ defmodule TelemetryInfluxDB do
      * `:tags` - list of global static tags, that will be attached to each reported event. The format is a map,
      where the key and the value are tag's name and value, respectively.
      Both the tag's name and the value could be atoms or binaries.
+
+  V1 Only Options
+     * `:db` - name of the location where time series data is stored in InfluxDB v1
+     * `:username` - username of InfluxDB's user that has writes privileges. Only required in v1.
+     * `:password` - password for the user. Only required in v1.
+
+  V2 Only Options
+     * `:bucket` - name of the location where time series data is stored in InfluxDB v2
+     * `:org` -  workspace in InfluxDB v2 where a bucket belongs
+     * `:token` - InfluxDB v2 authentication token used for authenticating requests. Must have write privileges to the bucket and org specified.
 
   #### Notes
 
@@ -65,9 +75,13 @@ defmodule TelemetryInfluxDB do
           | {:host, String.t()}
           | {:protocol, atom()}
           | {:reporter_name, binary()}
+          | {:version, atom()}
           | {:db, String.t()}
+          | {:org, String.t()}
+          | {:bucket, String.t()}
           | {:username, String.t()}
           | {:password, String.t()}
+          | {:token, String.t()}
           | {:events, [event]}
           | {:tags, tags}
 
@@ -91,10 +105,11 @@ defmodule TelemetryInfluxDB do
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
       |> Map.put_new(:tags, %{})
+      |> Map.put_new(:version, :v1)
       |> validate_required!([:events])
       |> validate_event_fields!()
       |> validate_protocol!()
-      |> validate_db!()
+      |> validate_version_params!()
 
     create_ets(config.reporter_name)
     specs = child_specs(config.protocol, config)
@@ -142,12 +157,35 @@ defmodule TelemetryInfluxDB do
     raise(ArgumentError, "protocol has to be :udp or :http")
   end
 
-  defp validate_db!(%{protocol: :udp} = opts), do: opts
-  defp validate_db!(%{protocol: :http, db: _db} = opts), do: opts
+  defp validate_version_params!(%{version: :v2} = opts), do: validate_v2_params!(opts)
+  defp validate_version_params!(%{version: :v1} = opts), do: validate_v1_params!(opts)
 
-  defp validate_db!(_) do
-    raise(ArgumentError, "for http protocol you need to specify :db field")
+  defp validate_version_params!(_opts) do
+    raise(
+      ArgumentError,
+      "version must be :v1 or :v2"
+    )
   end
+
+  defp validate_v2_params!(%{protocol: :http, org: _org, bucket: _bucket, token: _token} = opts),
+    do: opts
+
+  defp validate_v2_params!(%{protocol: :udp}) do
+    raise(
+      ArgumentError,
+      "the udp protocol is not currently supported for InfluxDB v2; please use http instead"
+    )
+  end
+
+  defp validate_v2_params!(_) do
+    raise(ArgumentError, "for InfluxDB v2 you need to specify :bucket, :org, and :token fields")
+  end
+
+  defp validate_v1_params!(%{protocol: :udp} = opts), do: opts
+  defp validate_v1_params!(%{protocol: :http, db: _db} = opts), do: opts
+
+  defp validate_v1_params!(_),
+    do: raise(ArgumentError, "for http protocol in v1 you need to specify :db field")
 
   defp validate_event_fields!(%{events: []}) do
     raise(ArgumentError, "you need to attach to at least one event")
