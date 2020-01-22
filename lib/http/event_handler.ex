@@ -25,10 +25,14 @@ defmodule TelemetryInfluxDB.HTTP.EventHandler do
   def attach_events(event_specs, config) do
     Enum.map(event_specs, fn e ->
       pool_name = Pool.get_name(config.reporter_name)
-      config = Map.put(config, :pool_name, pool_name)
+      
+      telemetry_config =
+        Map.delete(config, :events)
+        |> Map.put(:pool_name, pool_name)
+        |> Map.put(:metadata_keys, e[:metadata_keys] || [])
 
       handler_id = handler_id(e.name, config.reporter_name)
-      :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, config)
+      :ok = :telemetry.attach(handler_id, e.name, &__MODULE__.handle_event/4, telemetry_config)
       handler_id
     end)
   end
@@ -41,8 +45,15 @@ defmodule TelemetryInfluxDB.HTTP.EventHandler do
         ) :: :ok
   def handle_event(event, measurements, metadata, config) do
     query = config.host <> ":" <> config.port <> "/write?db=" <> config.db
+    
     event_tags = Map.get(metadata, :tags, %{})
-    body = Formatter.format(event, measurements, Map.merge(config.tags, event_tags))
+    event_metadatas = Map.take(metadata, config.metadata_keys)
+    
+    tags =
+      Map.merge(config.tags, event_tags)
+      |> Map.merge(event_metadatas)
+
+    body = Formatter.format(event, measurements, tags)
 
     headers =
       Map.merge(authentication_header(config.username, config.password), binary_data_header())

@@ -9,9 +9,9 @@ defmodule TelemetryInfluxDBTest do
     db: "myinflux",
     username: "myuser",
     password: "mysecretpassword",
-    host: "localhost",
+    host: "10.55.0.15",
     protocol: :udp,
-    port: 8087
+    port: 8086
   }
   describe "Invalid reporter configuration - " do
     test "error log message is displayed for invalid influxdb credentials" do
@@ -205,6 +205,25 @@ defmodule TelemetryInfluxDBTest do
       end
 
       @tag protocol: protocol
+      test "events are reported with metadata tags specified for #{protocol} API", %{
+        protocol: protocol
+      } do
+        ## given
+        event = given_event_spec([:database, :repo], [:hostname])
+        pid = start_reporter(protocol, %{events: [event]})
+
+        ## when
+        :telemetry.execute([:database, :repo], %{"query_time" => 0.01}, %{hostname: "host-01"})
+
+        ## then
+        assert_reported("database.repo", %{"query_time" => 0.01, "hostname" => "\"host-01\""})
+
+        ## cleanup
+        clear_series("database.repo")
+        stop_reporter(pid)
+      end
+
+      @tag protocol: protocol
       test "events are reported with special characters for #{protocol} API", %{
         protocol: protocol
       } do
@@ -369,8 +388,8 @@ defmodule TelemetryInfluxDBTest do
     refute_reported("second.event")
   end
 
-  defp given_event_spec(name) do
-    %{name: name}
+  defp given_event_spec(name, metadata_keys \\ []) do
+    %{name: name, metadata_keys: metadata_keys}
   end
 
   defp refute_reported(name, config \\ @default_options) do
@@ -423,7 +442,7 @@ defmodule TelemetryInfluxDBTest do
 
   defp start_reporter(:http, options) do
     @default_options
-    |> Map.merge(%{protocol: :http, port: 8087})
+    |> Map.merge(%{protocol: :http, port: 8086})
     |> Map.merge(options)
     |> start_reporter()
   end

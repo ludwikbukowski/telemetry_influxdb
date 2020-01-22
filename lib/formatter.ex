@@ -31,11 +31,13 @@ defmodule TelemetryInfluxDB.Formatter do
   defp to_bin(val) when is_integer(val), do: Integer.to_string(val)
   defp to_bin(val) when is_float(val), do: Float.to_string(val)
   defp to_bin(val) when is_atom(val), do: Atom.to_string(val)
+  defp to_bin(val) when is_map(val), do: "Unsupported data type"
   defp to_bin(val), do: escape_special_chars(val)
 
   defp to_bin_quoted(val) when is_integer(val), do: to_bin(val)
   defp to_bin_quoted(val) when is_float(val), do: to_bin(val)
   defp to_bin_quoted(val) when is_boolean(val), do: to_bin(val)
+  defp to_bin_quoted(val) when is_map(val), do: "\"" <> to_bin(val) <> "\""
   defp to_bin_quoted(val), do: "\"" <> to_bin(val) <> "\""
 
   defp binary_map(atomized_map) do
