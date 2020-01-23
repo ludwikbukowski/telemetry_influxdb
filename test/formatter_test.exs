@@ -49,6 +49,11 @@ defmodule TelemetryInfluxDB.FormatterTest do
              "string.test my_string=\"jacknicholson\""
   end
 
+  test "properly formats the point with map" do
+    assert Formatter.format([:map, :test], %{my_map: %{key1: "jacknicholson"}}) ==
+             "map.test my_map=\"Unsupported data type\""
+  end
+
   test "properly formats the point with string tag that looks like integer though" do
     assert Formatter.format([:string, :test], %{my_fake_int: "123"}) ==
              "string.test my_fake_int=\"123\""
