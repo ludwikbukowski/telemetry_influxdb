@@ -9,7 +9,7 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
   ```elixir
       TelemetryInfluxDB.start_link(
         events: [
-          %{name: [:memory, :usage], metadata_keys: [:host, :ip_address]},
+          %{name: [:memory, :usage], metadata_tag_keys: [:host, :ip_address]},
           %{name: [:http, :request]},
         ]
       )
@@ -21,7 +21,7 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
   children = [
     {TelemetryInfluxDB, [
       events: [
-        %{name: [:memory, :usage], metadata_keys: [:host, :ip_address]},
+        %{name: [:memory, :usage], metadata_tag_keys: [:host, :ip_address]},
         %{name: [:http, :request]}
     ]}
   ]
@@ -57,7 +57,7 @@ Possible options for the reporter:
     Each event should be specified by the map with the field `name`, e.g. `%{name: [:sample, :event, :name]}`.
     Event names should be compatible with `Telemetry` events' format.
     It is also possible to specify an optional list of metadata keys that will be included in the event body and sent to InfluxDB as tags.
-    The list of metadata keys should be specified in the event data with the field `metadata_keys`, e.g. `%{name: [:sample, :event, :name], metadata_keys: [:sample_meta, sample_meta2]}`
+    The list of metadata keys should be specified in the event data with the field `metadata_tag_keys`, e.g. `%{name: [:sample, :event, :name], metadata_tag_keys: [:sample_meta, sample_meta2]}`
  - `:tags` - list of global static tags, that will be attached to each reported event. The format is a map,
     where the key and the value are tag's name and value, respectively.
     Both the tag's name and the value could be atoms or binaries.

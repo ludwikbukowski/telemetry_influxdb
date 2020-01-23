@@ -388,8 +388,8 @@ defmodule TelemetryInfluxDBTest do
     refute_reported("second.event")
   end
 
-  defp given_event_spec(name, metadata_keys \\ []) do
-    %{name: name, metadata_keys: metadata_keys}
+  defp given_event_spec(name, metadata_tag_keys \\ []) do
+    %{name: name, metadata_tag_keys: metadata_tag_keys}
   end
 
   defp refute_reported(name, config \\ @default_options) do
