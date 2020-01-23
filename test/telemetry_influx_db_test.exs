@@ -9,9 +9,9 @@ defmodule TelemetryInfluxDBTest do
     db: "myinflux",
     username: "myuser",
     password: "mysecretpassword",
-    host: "10.55.0.15",
+    host: "localhost",
     protocol: :udp,
-    port: 8086
+    port: 8087
   }
   describe "Invalid reporter configuration - " do
     test "error log message is displayed for invalid influxdb credentials" do
@@ -442,7 +442,7 @@ defmodule TelemetryInfluxDBTest do
 
   defp start_reporter(:http, options) do
     @default_options
-    |> Map.merge(%{protocol: :http, port: 8086})
+    |> Map.merge(%{protocol: :http, port: 8087})
     |> Map.merge(options)
     |> start_reporter()
   end

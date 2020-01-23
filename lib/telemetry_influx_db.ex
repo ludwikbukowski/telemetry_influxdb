@@ -88,7 +88,7 @@ defmodule TelemetryInfluxDB do
       |> Enum.into(%{})
       |> Map.put_new(:reporter_name, "default")
       |> Map.put_new(:protocol, :udp)
-      |> Map.put_new(:host, "10.55.0.15")
+      |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
       |> Map.put_new(:tags, %{})
       |> validate_required!([:events])
