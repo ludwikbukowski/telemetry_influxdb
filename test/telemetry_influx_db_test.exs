@@ -216,7 +216,7 @@ defmodule TelemetryInfluxDBTest do
         :telemetry.execute([:database, :repo], %{"query_time" => 0.01}, %{hostname: "host-01"})
 
         ## then
-        assert_reported("database.repo", %{"query_time" => 0.01, "hostname" => "\"host-01\""})
+        assert_reported("database.repo", %{"query_time" => 0.01}, %{"hostname" => "\"host-01\""})
 
         ## cleanup
         clear_series("database.repo")
@@ -413,13 +413,30 @@ defmodule TelemetryInfluxDBTest do
              end)
 
     assert record["name"] == name
-    assert record["columns"] == ["time"] ++ Map.keys(values) ++ Map.keys(tags)
+    assert record["columns"] == ["time"] ++ Enum.sort(Map.keys(values) ++ Map.keys(tags))
     map_vals = Map.values(values)
     map_tag_vals = Map.values(tags)
     all_vals = map_vals ++ map_tag_vals
 
     assert [[_ | tag_and_fields]] = record["values"]
-    assert tag_and_fields == all_vals
+    assert Enum.sort(tag_and_fields) == Enum.sort(all_vals)
+    assert_tags(config, tags)
+  end
+
+  defp assert_tags(_, %{}), do: :ok
+
+  defp assert_tags(config, tags) do
+    assert eventually(fn ->
+             res = InfluxSimpleClient.query(config, "SHOW TAG KEYS;")
+
+             with [inner_map] <- res["results"],
+                  [record] <- inner_map["series"],
+                  [tags] <- record["values"] do
+               tags
+             else
+               _ -> false
+             end
+           end) == Map.keys(tags)
   end
 
   defp clear_series(name, config \\ @default_options) do

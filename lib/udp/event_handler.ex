@@ -27,7 +27,7 @@ defmodule TelemetryInfluxDB.UDP.EventHandler do
   def attach_events(event_specs, config) do
     Enum.map(event_specs, fn e ->
       handler_id = handler_id(e.name, config.reporter_name)
-      
+
       telemetry_config =
         Map.delete(config, :events)
         |> Map.put(:metadata_tag_keys, e[:metadata_tag_keys] || [])
@@ -45,11 +45,11 @@ defmodule TelemetryInfluxDB.UDP.EventHandler do
         ) :: :ok
   def handle_event(event, measurements, metadata, config) do
     udp = Connector.get_udp(config.reporter_name)
-    
+
     event_tags = Map.get(metadata, :tags, %{})
     event_metadatas = Map.take(metadata, config.metadata_tag_keys)
-    
-    tags = 
+
+    tags =
       Map.merge(config.tags, event_tags)
       |> Map.merge(event_metadatas)
 
