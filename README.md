@@ -1,7 +1,7 @@
 # telemetry_influxdb
 InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
 
-`Telemetry` reporter for InfluxDB compatibile events.
+`Telemetry` reporter for InfluxDB compatible events.
 
   To use it, start the reporter with the `start_link/1` function, providing it a list of
   `Telemetry` event names:
@@ -35,24 +35,26 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
   whenever a relevant Telemetry event is emitted.
 
 ## Run test
+
+Running the tests currently requires [jq](https://stedolan.github.io/jq/). Please make sure you have it installed before running the tests.
+
 ```
 $ make test
 ```
 
-It should setup the latest InfluxDB in docker and run all the tests against it.
+It should setup the latest InfluxDB in docker for both v1 and v2 and runs all the tests against them.
 
 ## Configuration
 
 Possible options for the reporter:
 
+### Options for Any InfluxDB Version
+ - `:version` - :v1 or :v2. The version of InfluxDB to use; defaults to :v1 if not provided
  - `:reporter_name` - unique name for the reporter. The purpose is to distinguish between different reporters running in the system.
     One can run separate independent InfluxDB reporters, with different configurations and goals.
- - `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp.
+ - `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp. InfluxDB v2 only supports :http for now.
  - `:host` - host, where InfluxDB is running.
  - `:port` - port, where InfluxDB is running.
- - `:db` - name of InfluxDB's  instance.
- - `:username` - username of InfluxDB's user that has writes privileges.
- - `:password` - password for the user.
  - `:events` - list of `Telemetry` events' names that we want to send to InfluxDB.
     Each event should be specified by the map with the field `name`, e.g. `%{name: [:sample, :event, :name]}`.
     Event names should be compatible with `Telemetry` events' format.
@@ -61,6 +63,14 @@ Possible options for the reporter:
  - `:tags` - list of global static tags, that will be attached to each reported event. The format is a map,
     where the key and the value are tag's name and value, respectively.
     Both the tag's name and the value could be atoms or binaries.
+### V1 Only Options
+ - `:db` - name of the location where time series data is stored in InfluxDB v1
+ - `:username` - username of InfluxDB's user that has writes privileges. Only required in v1.
+ - `:password` - password for the user. Only required for v1.
+### V2 Only Options
+ - `:bucket` - name of the location where time series data is stored in InfluxDB v2
+ - `:org` -  workspace in InfluxDB v2 where a bucket belongs
+ - `:token` - InfluxDB v2 authentication token used for authenticating requests. Must have write privileges to the bucket and org specified.
 
 ## Notes
 
@@ -81,4 +91,3 @@ TelemetryInfluxDB is copyright (c) 2019 Ludwik Bukowski.
 TelemetryInfluxDB source code is released under MIT license.
 
 See [LICENSE](LICENSE) for more information.
-
