@@ -35,6 +35,9 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
   whenever a relevant Telemetry event is emitted.
 
 ## Run test
+
+Running the tests currently requires [jq](https://stedolan.github.io/jq/). Please make sure you have it installed before running the tests.
+
 ```
 $ make test
 ```
