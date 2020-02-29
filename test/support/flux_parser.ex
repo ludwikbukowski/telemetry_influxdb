@@ -12,31 +12,37 @@ defmodule TelemetryInfluxDB.Test.FluxParser do
 
   def parse_tables(csv) do
     csv
-    |> parse_chunks()
-    |> Enum.flat_map(fn chunk ->
-      table_data =
-        chunk
-        |> extract_table_text()
-        |> parse_csv()
-        |> separate_tables()
+    |> extract_chunks()
+    |> Enum.flat_map(&parse_chunk/1)
+  end
 
-      annotation_data =
-        chunk
-        |> extract_annotation_text()
-        |> parse_csv()
+  def extract_chunks(csv) do
+    csv
+    |> String.trim()
+    |> String.split(~r/\n\s*\n/)
+  end
 
-      Enum.flat_map(table_data, fn table ->
-        case length(table) do
-          0 ->
-            %{}
+  def parse_chunk(chunk) do
+    {annotations, data} =
+      chunk
+      |> String.split("\n")
+      |> Enum.split_with(&is_annotation?/1)
 
-          _ ->
-            [column_names | table_rows] = table
-            column_types = annotation_data |> get_column_types()
-            parse_table(table_rows, column_names, column_types)
-        end
-      end)
-    end)
+    table_data = data |> parse_lines() |> separate_tables()
+    column_types = annotations |> parse_lines() |> get_column_types()
+
+    Enum.flat_map(table_data, &parse_table(&1, column_types))
+  end
+
+  defp is_annotation?(line) do
+    String.starts_with?(line, "#")
+  end
+
+  defp parse_lines(lines) do
+    lines
+    |> Enum.join("\n")
+    |> String.trim()
+    |> parse_csv()
   end
 
   defp separate_tables(parsed) when parsed == [], do: [[]]
@@ -58,7 +64,14 @@ defmodule TelemetryInfluxDB.Test.FluxParser do
     |> Enum.at(col_types_index)
   end
 
-  defp parse_table(
+  defp parse_table(table, _column_types) when length(table) == 0, do: %{}
+
+  defp parse_table(table, column_types) do
+    [column_names | table_rows] = table
+    parse_rows(table_rows, column_names, column_types)
+  end
+
+  defp parse_rows(
          table,
          [_datatype | column_names],
          [_ | column_types]
@@ -77,28 +90,6 @@ defmodule TelemetryInfluxDB.Test.FluxParser do
     type = Map.get(@column_types, raw_type)
     typed_value = parse_value(value, type)
     {column, typed_value}
-  end
-
-  def extract_table_text(table_text) do
-    table_text
-    |> String.split("\n")
-    |> Enum.filter(fn line -> !String.starts_with?(line, "#") end)
-    |> Enum.join("\n")
-    |> String.trim()
-  end
-
-  def extract_annotation_text(table_text) do
-    table_text
-    |> String.split("\n")
-    |> Enum.filter(fn line -> String.starts_with?(line, "#") end)
-    |> Enum.join("\n")
-    |> String.trim()
-  end
-
-  def parse_chunks(csv) do
-    csv
-    |> String.trim()
-    |> String.split(~r/\n\s*\n/)
   end
 
   def parse_value("null", _type), do: nil
