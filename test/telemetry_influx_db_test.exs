@@ -604,32 +604,19 @@ defmodule TelemetryInfluxDBTest do
         end
       end)
 
-    tag_values = Map.values(tags)
-    tag_keys = Map.keys(tags)
+    assert_tags(config, name, tags, results)
 
-    assert Enum.all?(results, fn result ->
-             measurement = Map.get(result, "_measurement")
+    assert Enum.map(results, & &1["_field"]) == Map.keys(values)
 
-             has_tag_keys = Enum.all?(tag_keys, fn tag_key -> Map.has_key?(result, tag_key) end)
+    values
+    |> Map.keys()
+    |> Enum.each(&assert_value(&1, values, results))
+  end
 
-             result_tag_values =
-               tags
-               |> Map.keys()
-               |> Enum.map(fn key -> Map.get(result, key) end)
+  defp assert_value(key, values, results) do
+    field_result = Enum.find(results, &(&1["_field"] == key))
 
-             measurement == name and has_tag_keys and result_tag_values == tag_values
-           end)
-
-    assert Enum.map(results, fn result -> Map.get(result, "_field") end) == Map.keys(values)
-
-    Enum.each(Map.keys(values), fn key ->
-      field_result =
-        Enum.find(results, fn result ->
-          Map.get(result, "_field") == key
-        end)
-
-      assert Map.get(field_result, "_value") == Map.get(values, key)
-    end)
+    assert field_result["_value"] == values[key]
   end
 
   defp assert_tags(_, %{}), do: :ok
@@ -646,6 +633,25 @@ defmodule TelemetryInfluxDBTest do
                _ -> false
              end
            end) == Map.keys(tags)
+  end
+
+  defp assert_tags(%{version: :v2}, name, tags, results) do
+    expected_tag_values = Map.values(tags)
+    expected_tag_keys = Map.keys(tags)
+
+    assert Enum.all?(results, fn result ->
+             measurement = result["_measurement"]
+
+             has_tag_keys =
+               Enum.all?(expected_tag_keys, fn tag_key -> Map.has_key?(result, tag_key) end)
+
+             actual_tag_values =
+               tags
+               |> Map.keys()
+               |> Enum.map(&result[&1])
+
+             measurement == name and has_tag_keys and actual_tag_values == expected_tag_values
+           end)
   end
 
   defp query(%{version: :v1} = config, name) do
