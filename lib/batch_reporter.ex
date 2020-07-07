@@ -9,6 +9,22 @@ defmodule TelemetryInfluxDB.BatchReporter do
 
   defmodule State do
     defstruct [:report_fn, :batch_size, report_scheduled?: false, unreported_events: []]
+
+    def enqueue_event(state, event) do
+      %{state | unreported_events: state.unreported_events ++ [event]}
+    end
+
+    def set_unreported_events(state, remaining_events) do
+      %{state | unreported_events: remaining_events}
+    end
+
+    def set_report_scheduled(state) do
+      %{state | report_scheduled?: true}
+    end
+
+    def reset_report_scheduled(state) do
+      %{state | report_scheduled?: false}
+    end
   end
 
   def start_link(opts \\ []) do
@@ -31,7 +47,7 @@ defmodule TelemetryInfluxDB.BatchReporter do
   def handle_cast({:enqueue_event, event}, state) do
     updated_state =
       state
-      |> do_enqueue_event(event)
+      |> State.enqueue_event(event)
       |> maybe_report_events()
 
     {:noreply, updated_state}
@@ -44,27 +60,11 @@ defmodule TelemetryInfluxDB.BatchReporter do
 
     updated_state =
       state
-      |> set_unreported_events(remaining_events)
-      |> reset_report_scheduled()
+      |> State.set_unreported_events(remaining_events)
+      |> State.reset_report_scheduled()
       |> maybe_report_events()
 
     {:noreply, updated_state}
-  end
-
-  defp do_enqueue_event(state, event) do
-    %{state | unreported_events: state.unreported_events ++ [event]}
-  end
-
-  defp set_unreported_events(state, remaining_events) do
-    %{state | unreported_events: remaining_events}
-  end
-
-  defp set_report_scheduled(state) do
-    %{state | report_scheduled?: true}
-  end
-
-  defp reset_report_scheduled(state) do
-    %{state | report_scheduled?: false}
   end
 
   defp maybe_report_events(%{report_scheduled?: true} = state), do: state
@@ -73,6 +73,6 @@ defmodule TelemetryInfluxDB.BatchReporter do
 
   defp maybe_report_events(state) do
     send(self(), :report_events)
-    set_report_scheduled(state)
+    State.set_report_scheduled(state)
   end
 end
