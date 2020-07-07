@@ -8,7 +8,7 @@ defmodule TelemetryInfluxDB.BatchReporter do
   use GenServer
 
   defmodule State do
-    defstruct [:report_fn, :batch_size, report_scheduled: false, unreported_events: []]
+    defstruct [:report_fn, :batch_size, report_scheduled?: false, unreported_events: []]
   end
 
   def start_link(opts \\ []) do
@@ -60,14 +60,14 @@ defmodule TelemetryInfluxDB.BatchReporter do
   end
 
   defp set_report_scheduled(state) do
-    %{state | report_scheduled: true}
+    %{state | report_scheduled?: true}
   end
 
   defp reset_report_scheduled(state) do
-    %{state | report_scheduled: false}
+    %{state | report_scheduled?: false}
   end
 
-  defp maybe_report_events(%{report_scheduled: true} = state), do: state
+  defp maybe_report_events(%{report_scheduled?: true} = state), do: state
 
   defp maybe_report_events(%{unreported_events: []} = state), do: state
 
