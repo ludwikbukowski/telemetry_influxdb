@@ -8,6 +8,24 @@ defmodule TelemetryInfluxDB.HTTP.EventHandler do
   alias TelemetryInfluxDB, as: InfluxDB
   require Logger
 
+  @spec add_internal_config(InfluxDB.config()) :: InfluxDB.config()
+  def add_internal_config(config) do
+    pool_name = Pool.get_name(config.reporter_name)
+
+    config
+    |> Map.put(:pool_name, pool_name)
+    |> Map.put(:send_event, &__MODULE__.send_event/2)
+  end
+
+  @spec send_event(String.t(), InfluxDB.config()) :: :ok
+  def send_event(formatted_event, config) do
+    url = build_url(config)
+    body = formatted_event
+    headers = Map.merge(authentication_header(config), binary_data_header())
+
+    :wpool.cast(config.pool_name, {__MODULE__, :send_event, [url, body, headers]})
+  end
+
   @spec start_link(InfluxDB.config()) :: GenServer.on_start()
   def start_link(config) do
     GenServer.start_link(__MODULE__, config)
