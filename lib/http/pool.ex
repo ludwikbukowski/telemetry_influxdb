@@ -26,13 +26,13 @@ defmodule TelemetryInfluxDB.HTTP.Pool do
 
   def get_name(prefix) do
     case :ets.lookup(table_name(prefix), "pool") do
-      [{"pool", sock}] -> sock
+      [{"pool", pool_name}] -> pool_name
       _ -> :no_pool
     end
   end
 
-  defp insert_pool_ets(prefix, socket) do
-    :ets.insert(table_name(prefix), {"pool", socket})
+  defp insert_pool_ets(prefix, pool_name) do
+    :ets.insert(table_name(prefix), {"pool", pool_name})
   end
 
   defp delete_old_pool_ets(prefix) do
