@@ -14,6 +14,7 @@ defmodule TelemetryInfluxDB.EventHandler do
   @impl GenServer
   def init(config) do
     Process.flag(:trap_exit, true)
+    config = config.publisher.add_config(config)
     handler_ids = attach_events(config.events, config)
 
     {:ok, %{handler_ids: handler_ids}}
@@ -60,7 +61,7 @@ defmodule TelemetryInfluxDB.EventHandler do
 
     formatted_event = Formatter.format(event, measurements, tags)
 
-    config.send_event.(formatted_event, config)
+    config.publisher.publish(formatted_event, config)
 
     :ok
   end

@@ -1,4 +1,5 @@
 defmodule TelemetryInfluxDB do
+  alias TelemetryInfluxDB.EventHandler
   alias TelemetryInfluxDB.HTTP
   alias TelemetryInfluxDB.UDP
   require Logger
@@ -110,10 +111,19 @@ defmodule TelemetryInfluxDB do
       |> validate_event_fields!()
       |> validate_protocol!()
       |> validate_version_params!()
+      |> add_publisher()
 
     create_ets(config.reporter_name)
     specs = child_specs(config.protocol, config)
     Supervisor.start_link(specs, strategy: :one_for_all)
+  end
+
+  defp add_publisher(%{protocol: :http} = config) do
+    Map.put(config, :publisher, HTTP.Publisher)
+  end
+
+  defp add_publisher(%{protocol: :udp} = config) do
+    Map.put(config, :publisher, UDP.Publisher)
   end
 
   defp create_ets(prefix) do
@@ -133,22 +143,17 @@ defmodule TelemetryInfluxDB do
     Supervisor.stop(pid)
   end
 
-  defp child_specs(:http, config), do: http_child_specs(config)
-  defp child_specs(:udp, config), do: udp_child_specs(config)
-
-  defp http_child_specs(config) do
-    [
-      HTTP.Pool.child_spec(config),
-      %{id: HTTP.Handler, start: {HTTP.EventHandler, :start_link, [config]}}
-    ]
+  defp child_specs(protocol, config) do
+    publisher_child_specs(protocol, config) ++ common_child_specs(config)
   end
 
-  defp udp_child_specs(config) do
-    [
-      %{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}},
-      %{id: UDP.Handler, start: {UDP.EventHandler, :start_link, [config]}}
-    ]
-  end
+  defp publisher_child_specs(:http, config), do: [HTTP.Pool.child_spec(config)]
+
+  defp publisher_child_specs(:udp, config),
+    do: [%{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}}]
+
+  defp common_child_specs(config),
+    do: [%{id: EventHandler, start: {EventHandler, :start_link, [config]}}]
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts
   defp validate_protocol!(%{protocol: :http} = opts), do: opts
