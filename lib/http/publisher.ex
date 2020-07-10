@@ -19,9 +19,9 @@ defmodule TelemetryInfluxDB.HTTP.Publisher do
   end
 
   @impl InfluxDB.Publisher
-  def publish(formatted_event, config) do
+  def publish(payload, config) do
     url = build_url(config)
-    body = formatted_event
+    body = payload
     headers = Map.merge(authentication_header(config), binary_data_header())
 
     :wpool.cast(config.pool_name, {__MODULE__, :send_event, [url, body, headers]})

@@ -4,6 +4,7 @@ defmodule TelemetryInfluxDB.EventHandler do
   use GenServer
 
   alias TelemetryInfluxDB, as: InfluxDB
+  alias TelemetryInfluxDB.BatchReporter
   alias TelemetryInfluxDB.Formatter
 
   @spec start_link(InfluxDB.config()) :: GenServer.on_start()
@@ -61,9 +62,14 @@ defmodule TelemetryInfluxDB.EventHandler do
 
     formatted_event = Formatter.format(event, measurements, tags)
 
-    config.publisher.publish(formatted_event, config)
+    reporter_name = batch_reporter_name(config.reporter_name)
+    BatchReporter.enqueue_event(reporter_name, formatted_event)
 
     :ok
+  end
+
+  defp batch_reporter_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_batch_reporter", :utf8)
   end
 
   @spec handler_id(InfluxDB.event_name(), binary()) :: InfluxDB.handler_id()

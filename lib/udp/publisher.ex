@@ -14,9 +14,9 @@ defmodule TelemetryInfluxDB.UDP.Publisher do
   end
 
   @impl InfluxDB.Publisher
-  def publish(formatted_event, config) do
+  def publish(payload, config) do
     udp = Connector.get_udp(config.reporter_name)
-    packet = formatted_event <> "\n"
+    packet = payload <> "\n"
 
     case Socket.send(udp, packet) do
       :ok ->

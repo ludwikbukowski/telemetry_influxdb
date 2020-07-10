@@ -1,4 +1,5 @@
 defmodule TelemetryInfluxDB do
+  alias TelemetryInfluxDB.BatchReporter
   alias TelemetryInfluxDB.EventHandler
   alias TelemetryInfluxDB.HTTP
   alias TelemetryInfluxDB.UDP
@@ -32,6 +33,7 @@ defmodule TelemetryInfluxDB do
   Options for any InfluxDB version:
      * `:version` - :v1 or :v2. The version of InfluxDB to use; defaults to :v1 if not provided
      * `:reporter_name` - unique name for the reporter. The purpose is to distinguish between different reporters running in the system.
+     * `:batch_size` - maximum number of events to send to InfluxDB in a single batch (default 1: no batching)
      One can run separate independent InfluxDB reporters, with different configurations and goals.
      * `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp. InfluxDB v2 only supports :http for now.
      * `:host` - host, where InfluxDB is running.
@@ -76,6 +78,7 @@ defmodule TelemetryInfluxDB do
           | {:host, String.t()}
           | {:protocol, atom()}
           | {:reporter_name, binary()}
+          | {:batch_size, non_neg_integer()}
           | {:version, atom()}
           | {:db, String.t()}
           | {:org, String.t()}
@@ -102,6 +105,7 @@ defmodule TelemetryInfluxDB do
       options
       |> Enum.into(%{})
       |> Map.put_new(:reporter_name, "default")
+      |> Map.put_new(:batch_size, 1)
       |> Map.put_new(:protocol, :udp)
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
@@ -152,8 +156,28 @@ defmodule TelemetryInfluxDB do
   defp publisher_child_specs(:udp, config),
     do: [%{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}}]
 
-  defp common_child_specs(config),
-    do: [%{id: EventHandler, start: {EventHandler, :start_link, [config]}}]
+  defp common_child_specs(config) do
+    [
+      %{id: EventHandler, start: {EventHandler, :start_link, [config]}},
+      %{id: BatchReporter, start: {BatchReporter, :start_link, [batch_reporter_options(config)]}}
+    ]
+  end
+
+  def batch_reporter_options(config) do
+    [
+      name: batch_reporter_name(config.reporter_name),
+      batch_size: config.batch_size,
+      report_fn: fn events ->
+        events
+        |> Enum.join("\n")
+        |> (&config.publisher.publish(&1, config)).()
+      end
+    ]
+  end
+
+  defp batch_reporter_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_batch_reporter", :utf8)
+  end
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts
   defp validate_protocol!(%{protocol: :http} = opts), do: opts
