@@ -62,14 +62,10 @@ defmodule TelemetryInfluxDB.EventHandler do
 
     formatted_event = Formatter.format(event, measurements, tags)
 
-    reporter_name = batch_reporter_name(config.reporter_name)
-    BatchReporter.enqueue_event(reporter_name, formatted_event, config)
+    BatchReporter.get_name(config)
+    |> BatchReporter.enqueue_event(formatted_event, config)
 
     :ok
-  end
-
-  defp batch_reporter_name(prefix) do
-    :erlang.binary_to_atom(prefix <> "_batch_reporter", :utf8)
   end
 
   @spec handler_id(InfluxDB.event_name(), binary()) :: InfluxDB.handler_id()
