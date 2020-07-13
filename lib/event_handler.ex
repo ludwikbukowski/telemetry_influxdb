@@ -63,7 +63,7 @@ defmodule TelemetryInfluxDB.EventHandler do
     formatted_event = Formatter.format(event, measurements, tags)
 
     reporter_name = batch_reporter_name(config.reporter_name)
-    BatchReporter.enqueue_event(reporter_name, formatted_event)
+    BatchReporter.enqueue_event(reporter_name, formatted_event, config)
 
     :ok
   end

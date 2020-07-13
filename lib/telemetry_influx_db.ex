@@ -167,7 +167,7 @@ defmodule TelemetryInfluxDB do
     [
       name: batch_reporter_name(config.reporter_name),
       batch_size: config.batch_size,
-      report_fn: fn events ->
+      report_fn: fn events, config ->
         events
         |> Enum.join("\n")
         |> (&config.publisher.publish(&1, config)).()

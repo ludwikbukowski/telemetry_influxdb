@@ -8,10 +8,16 @@ defmodule TelemetryInfluxDB.BatchReporter do
   use GenServer
 
   defmodule State do
-    defstruct [:report_fn, :batch_size, report_scheduled?: false, unreported_events: []]
+    defstruct [
+      :report_fn,
+      :batch_size,
+      :config,
+      report_scheduled?: false,
+      unreported_events: []
+    ]
 
-    def enqueue_event(state, event) do
-      %{state | unreported_events: state.unreported_events ++ [event]}
+    def enqueue_event(state, event, config) do
+      %{state | unreported_events: state.unreported_events ++ [event], config: config}
     end
 
     def set_unreported_events(state, remaining_events) do
@@ -40,14 +46,14 @@ defmodule TelemetryInfluxDB.BatchReporter do
     {:ok, state}
   end
 
-  def enqueue_event(pid \\ __MODULE__, event) do
-    GenServer.cast(pid, {:enqueue_event, event})
+  def enqueue_event(pid \\ __MODULE__, event, config) do
+    GenServer.cast(pid, {:enqueue_event, event, config})
   end
 
-  def handle_cast({:enqueue_event, event}, state) do
+  def handle_cast({:enqueue_event, event, config}, state) do
     updated_state =
       state
-      |> State.enqueue_event(event)
+      |> State.enqueue_event(event, config)
       |> maybe_report_events()
 
     {:noreply, updated_state}
@@ -56,7 +62,7 @@ defmodule TelemetryInfluxDB.BatchReporter do
   def handle_info(:report_events, state) do
     {events_to_report, remaining_events} = Enum.split(state.unreported_events, state.batch_size)
 
-    state.report_fn.(events_to_report)
+    state.report_fn.(events_to_report, state.config)
 
     updated_state =
       state
