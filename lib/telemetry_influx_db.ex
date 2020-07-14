@@ -1,5 +1,6 @@
 defmodule TelemetryInfluxDB do
   alias TelemetryInfluxDB.BatchReporter
+  alias TelemetryInfluxDB.BatchHandler
   alias TelemetryInfluxDB.EventHandler
   alias TelemetryInfluxDB.HTTP
   alias TelemetryInfluxDB.UDP
@@ -167,19 +168,9 @@ defmodule TelemetryInfluxDB do
     [
       name: BatchReporter.get_name(config),
       batch_size: config.batch_size,
-      report_fn: fn batch ->
-        config = batch_config(batch)
-
-        batch
-        |> batch_events()
-        |> Enum.join("\n")
-        |> (&config.publisher.publish(&1, config)).()
-      end
+      report_fn: &BatchHandler.handle_batch/1
     ]
   end
-
-  def batch_config([{_event, config} | _rest]), do: config
-  def batch_events(batch), do: Enum.map(batch, fn {event, _} -> event end)
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts
   defp validate_protocol!(%{protocol: :http} = opts), do: opts
