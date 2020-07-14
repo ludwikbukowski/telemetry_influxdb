@@ -67,6 +67,10 @@ defmodule TelemetryInfluxDB.BatchReporter do
     {:noreply, updated_state}
   end
 
+  def get_name(config) do
+    :erlang.binary_to_atom(config.reporter_name <> "_batch_reporter", :utf8)
+  end
+
   defp maybe_report_events(%{report_scheduled?: true} = state), do: state
 
   defp maybe_report_events(%{unreported_events: []} = state), do: state

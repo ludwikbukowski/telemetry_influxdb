@@ -165,19 +165,21 @@ defmodule TelemetryInfluxDB do
 
   def batch_reporter_options(config) do
     [
-      name: batch_reporter_name(config.reporter_name),
+      name: BatchReporter.get_name(config),
       batch_size: config.batch_size,
-      report_fn: fn events ->
-        events
+      report_fn: fn batch ->
+        config = batch_config(batch)
+
+        batch
+        |> batch_events()
         |> Enum.join("\n")
         |> (&config.publisher.publish(&1, config)).()
       end
     ]
   end
 
-  defp batch_reporter_name(prefix) do
-    :erlang.binary_to_atom(prefix <> "_batch_reporter", :utf8)
-  end
+  def batch_config([{_event, config} | _rest]), do: config
+  def batch_events(batch), do: Enum.map(batch, fn {event, _} -> event end)
 
   defp validate_protocol!(%{protocol: :udp} = opts), do: opts
   defp validate_protocol!(%{protocol: :http} = opts), do: opts
