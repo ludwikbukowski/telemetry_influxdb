@@ -17,7 +17,6 @@ defmodule TelemetryInfluxDB.UDP.EventHandler do
   def init(config) do
     Process.flag(:trap_exit, true)
     config = %{config | port: :erlang.integer_to_binary(config.port)}
-    config = Map.put(config, :reporter, self())
     handler_ids = attach_events(config.events, config)
 
     {:ok, %{handler_ids: handler_ids}}
@@ -60,7 +59,7 @@ defmodule TelemetryInfluxDB.UDP.EventHandler do
         :ok
 
       {:error, reason} ->
-        Connector.udp_error(config.reporter, udp, reason)
+        Connector.udp_error(config.reporter_name, udp, reason)
     end
   end
 

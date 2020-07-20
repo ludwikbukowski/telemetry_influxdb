@@ -6,7 +6,8 @@ defmodule TelemetryInfluxDB.UDP.Connector do
 
   @spec start_link(InfluxDB.config()) :: GenServer.on_start()
   def start_link(config) do
-    GenServer.start_link(__MODULE__, config)
+    server_name = process_name(config.reporter_name)
+    GenServer.start_link(__MODULE__, config, name: server_name)
   end
 
   def init(config) do
@@ -29,9 +30,10 @@ defmodule TelemetryInfluxDB.UDP.Connector do
     end
   end
 
-  @spec udp_error(pid(), Socket.t(), term()) :: :ok
-  def udp_error(reporter, udp, reason) do
-    GenServer.cast(reporter, {:udp_error, udp, reason})
+  @spec udp_error(String.t(), Socket.t(), term()) :: :ok
+  def udp_error(reporter_name, udp, reason) do
+    server_name = process_name(reporter_name)
+    GenServer.cast(server_name, {:udp_error, udp, reason})
   end
 
   defp insert_socket_ets(prefix, socket) do
@@ -44,6 +46,10 @@ defmodule TelemetryInfluxDB.UDP.Connector do
 
   defp table_name(prefix) do
     :erlang.binary_to_atom(prefix <> "_influx_reporter", :utf8)
+  end
+
+  defp process_name(prefix) do
+    :erlang.binary_to_atom(prefix <> "_udp_connector", :utf8)
   end
 
   def handle_cast({:udp_error, _, reason}, state) do
