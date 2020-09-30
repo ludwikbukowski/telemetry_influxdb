@@ -3,7 +3,7 @@ defmodule TelemetryInfluxDB.HTTP.Pool do
   require Logger
   alias TelemetryInfluxDB, as: InfluxDB
 
-  @default_workers_num 3
+  @default_workers_num 10
 
   @spec child_spec(InfluxDB.config()) :: Supervisor.child_spec()
   def child_spec(config) do
