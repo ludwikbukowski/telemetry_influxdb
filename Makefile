@@ -24,8 +24,8 @@ start_influx_v1: stop_influx_v1
 	--name=${CONTAINER_NAME_V1} influxdb -config /etc/influxdb/influxdb-meta.conf
 
 start_influx_v2: stop_influx_v2
-	docker run -tid -p 9999:9999 \
-	--name=${CONTAINER_NAME_V2} quay.io/influxdb/influxdb:2.0.0-beta
+	docker run -tid -p 9999:8086 \
+	--name=${CONTAINER_NAME_V2} quay.io/influxdb/influxdb:2.0.0-rc
 
 wait_for_influx: wait_for_influx_v1 provision_influx_v2
 

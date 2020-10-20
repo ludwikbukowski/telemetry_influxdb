@@ -698,7 +698,6 @@ defmodule TelemetryInfluxDBTest do
   defp make_config(%{version: :v2, protocol: :http, token: token}, overrides) do
     @default_config
     |> be_v2(token)
-    |> Map.merge(%{protocol: :http, port: 9999})
     |> Map.merge(overrides)
   end
 
