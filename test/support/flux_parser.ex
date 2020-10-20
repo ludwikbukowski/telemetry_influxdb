@@ -55,6 +55,8 @@ defmodule TelemetryInfluxDB.Test.FluxParser do
     |> Enum.map(fn table_rows -> List.insert_at(table_rows, 0, headers) end)
   end
 
+  def get_column_types([]), do: []
+
   def get_column_types(annotation_data) do
     col_types_index =
       annotation_data
