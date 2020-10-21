@@ -553,8 +553,7 @@ defmodule TelemetryInfluxDBTest do
   end
 
   defp do_clear_series(%{version: :v2} = config, name) do
-    predicate = "_measurement=\"#{name}\""
-    InfluxSimpleClient.V2.delete(config, predicate)
+    InfluxSimpleClient.V2.delete_measurement(config, name)
   end
 
   defp refute_reported(context, name) do

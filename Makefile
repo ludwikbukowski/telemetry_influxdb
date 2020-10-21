@@ -48,10 +48,21 @@ wait_for_influx_v2:
 	@echo "DONE"
 
 provision_influx_v2: wait_for_influx_v2
-	curl -sb -X POST -H "Content-type: application/json" \
+	@echo "Provisioning InfluxDB v2:"
+	@response=$$(curl -s -X POST http://localhost:9999/api/v2/setup \
+		-H "Content-type: application/json" \
 		-d "{\"username\":\"${USERNAME}\",\"password\":\"${PASSWORD}\",\"org\":\"myorg\",\"bucket\":\"${STORAGE}\"}" \
-		http://localhost:9999/api/v2/setup \
-		| jq -j .auth.token > .token
+		); \
+	token=$$(echo $$response | jq -j .auth.token); \
+	bucket=$$(echo $$response | jq -j .bucket.id); \
+	org=$$(echo $$response | jq -j .org.id); \
+	curl -s -X POST http://localhost:9999/api/v2/dbrps \
+		-H "Authorization: Token $$token" \
+		-H "Content-type: application/json" \
+		-d "{\"bucket_id\": \"$$bucket\",\"database\":\"${STORAGE}\",\"default\":true,\"organization_id\":\"$$org\",\"retention_policy\":\"default-rp\"}" \
+	> error_v2_provision.log 2>&1; \
+	echo -n $$token > .token
+	@echo "DONE"
 
 stop_influx: stop_influx_v1 stop_influx_v2
 
