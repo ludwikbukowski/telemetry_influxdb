@@ -623,7 +623,7 @@ defmodule TelemetryInfluxDBTest do
 
   defp assert_tags(%{version: :v1} = config, tags) do
     assert eventually(fn ->
-             res = InfluxSimpleClient.query(config, "SHOW TAG KEYS;")
+             res = InfluxSimpleClient.V1.query(config, "SHOW TAG KEYS;")
 
              with [inner_map] <- res["results"],
                   [record] <- inner_map["series"],
