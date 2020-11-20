@@ -39,9 +39,9 @@ defmodule TelemetryInfluxDBTest do
       pid = start_reporter(config)
       testpid = self()
 
-      :meck.new(TelemetryInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+      :meck.new(TelemetryInfluxDB.HTTP.Publisher, [:unstick, :passthrough])
 
-      :meck.expect(TelemetryInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+      :meck.expect(TelemetryInfluxDB.HTTP.Publisher, :send_event, fn q, b, h ->
         res = :meck.passthrough([q, b, h])
         send(testpid, :event_sent)
         res
@@ -57,7 +57,7 @@ defmodule TelemetryInfluxDBTest do
       ## then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
-      :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
+      :meck.unload(TelemetryInfluxDB.HTTP.Publisher)
     end
 
     test "error log message is displayed for invalid influxdb database" do
@@ -75,9 +75,9 @@ defmodule TelemetryInfluxDBTest do
 
       pid = start_reporter(config)
       testpid = self()
-      :meck.new(TelemetryInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+      :meck.new(TelemetryInfluxDB.HTTP.Publisher, [:unstick, :passthrough])
 
-      :meck.expect(TelemetryInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+      :meck.expect(TelemetryInfluxDB.HTTP.Publisher, :send_event, fn q, b, h ->
         res = :meck.passthrough([q, b, h])
         send(testpid, :event_sent)
         res
@@ -93,7 +93,7 @@ defmodule TelemetryInfluxDBTest do
       # then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
-      :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
+      :meck.unload(TelemetryInfluxDB.HTTP.Publisher)
     end
 
     test "error log message is displayed for missing db for HTTP" do
@@ -281,8 +281,8 @@ defmodule TelemetryInfluxDBTest do
 
         ## then
         assert_reported(context, "memory.leak", %{"memory_leaked" => 100}, %{
-          "region" => "\"eu_central\"",
-          "time_zone" => "\"cest\""
+          "region" => "eu_central",
+          "time_zone" => "cest"
         })
 
         ## cleanup
@@ -304,7 +304,7 @@ defmodule TelemetryInfluxDBTest do
 
         ## then
         assert_reported(context, "system.crash", %{"node_id" => "a3"}, %{
-          "priority" => "\"high\""
+          "priority" => "high"
         })
 
         ## cleanup
@@ -326,7 +326,7 @@ defmodule TelemetryInfluxDBTest do
 
         ## then
         assert_reported(context, "database.repo", %{"query_time" => 0.01}, %{
-          "hostname" => "\"host-01\""
+          "hostname" => "host-01"
         })
 
         ## cleanup
@@ -353,7 +353,7 @@ defmodule TelemetryInfluxDBTest do
 
         ## then
         assert_reported(context, "event.special1", %{"equal_sign" => "a\\\=b"}, %{
-          "priority" => "\"hig\\\\\"h\""
+          "priority" => "hig\\\"h"
         })
 
         assert_reported(context, "event.special2", %{"comma_space" => "a\\,b\\ c"}, %{})
@@ -451,13 +451,13 @@ defmodule TelemetryInfluxDBTest do
 
         ## then
         assert_reported(context, "servers1.down", %{"panic?" => "yes"}, %{
-          "region" => "\"eu_central\"",
-          "time_zone" => "\"cest\""
+          "region" => "eu_central",
+          "time_zone" => "cest"
         })
 
         assert_reported(context, "servers2.down", %{"panic?" => "yes"}, %{
-          "region" => "\"asia\"",
-          "time_zone" => "\"other\""
+          "region" => "asia",
+          "time_zone" => "other"
         })
 
         ## cleanup
