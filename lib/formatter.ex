@@ -11,7 +11,7 @@ defmodule TelemetryInfluxDB.Formatter do
 
     case timestamp do
       nil -> line
-      _ -> line <> " " <> to_bin(timestamp)
+      _ -> line <> " " <> format_timestamp(timestamp)
     end
   end
 
@@ -25,6 +25,11 @@ defmodule TelemetryInfluxDB.Formatter do
     "," <> comma_separated(tags, &to_bin/1)
   end
 
+  defp format_timestamp(timestamp) when is_integer(timestamp), do: Integer.to_string(timestamp)
+
+  defp format_timestamp(%DateTime{} = timestamp),
+    do: DateTime.to_unix(timestamp, :nanosecond) |> Integer.to_string()
+
   defp comma_separated(map, format_value) do
     map
     |> Enum.map(fn {k, v} -> to_bin(k) <> "=" <> format_value.(v) end)
@@ -34,7 +39,6 @@ defmodule TelemetryInfluxDB.Formatter do
   defp to_bin(val) when is_integer(val), do: Integer.to_string(val)
   defp to_bin(val) when is_float(val), do: Float.to_string(val)
   defp to_bin(val) when is_atom(val), do: Atom.to_string(val)
-  defp to_bin(%DateTime{} = val), do: DateTime.to_unix(val, :nanosecond) |> Integer.to_string()
   defp to_bin(val) when is_map(val), do: "Unsupported data type"
   defp to_bin(val), do: escape_special_chars(val)
 
