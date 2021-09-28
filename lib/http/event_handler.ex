@@ -47,13 +47,14 @@ defmodule TelemetryInfluxDB.HTTP.EventHandler do
     url = build_url(config)
 
     event_tags = Map.get(metadata, :tags, %{})
+    event_timestamp = Map.get(metadata, "_timestamp", DateTime.utc_now())
     event_metadatas = Map.take(metadata, config.metadata_tag_keys)
 
     tags =
       Map.merge(config.tags, event_tags)
       |> Map.merge(event_metadatas)
 
-    body = Formatter.format(event, measurements, tags)
+    body = Formatter.format(event, measurements, tags, event_timestamp)
 
     headers = Map.merge(authentication_header(config), binary_data_header())
 

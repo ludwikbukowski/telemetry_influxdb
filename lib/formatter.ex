@@ -6,8 +6,13 @@ defmodule TelemetryInfluxDB.Formatter do
   @type event_measurements :: map()
 
   @spec format(event_name(), event_measurements, tags()) :: binary
-  def format(event, measurements, tags \\ %{}) do
-    Enum.join(event, ".") <> format_tags(tags) <> format_measurements(measurements)
+  def format(event, measurements, tags \\ %{}, timestamp \\ nil) do
+    line = Enum.join(event, ".") <> format_tags(tags) <> format_measurements(measurements)
+
+    case timestamp do
+      nil -> line
+      _ -> line <> " " <> format_timestamp(timestamp)
+    end
   end
 
   defp format_measurements(measurements) do
@@ -20,6 +25,12 @@ defmodule TelemetryInfluxDB.Formatter do
     else
       ""
     end
+  end
+
+  defp format_timestamp(timestamp) when is_integer(timestamp), do: Integer.to_string(timestamp)
+
+  defp format_timestamp(%DateTime{} = timestamp) do
+    DateTime.to_unix(timestamp, :nanosecond) |> Integer.to_string()
   end
 
   defp comma_separated(measurements) do

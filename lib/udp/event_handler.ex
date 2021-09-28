@@ -46,13 +46,14 @@ defmodule TelemetryInfluxDB.UDP.EventHandler do
     udp = Connector.get_udp(config.reporter_name)
 
     event_tags = Map.get(metadata, :tags, %{})
+    event_timestamp = Map.get(metadata, "_timestamp")
     event_metadatas = Map.take(metadata, config.metadata_tag_keys)
 
     tags =
       Map.merge(config.tags, event_tags)
       |> Map.merge(event_metadatas)
 
-    packet = Formatter.format(event, measurements, tags) <> "\n"
+    packet = Formatter.format(event, measurements, tags, event_timestamp) <> "\n"
 
     case Socket.send(udp, packet) do
       :ok ->

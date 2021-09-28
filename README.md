@@ -34,6 +34,8 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
   Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
   whenever a relevant Telemetry event is emitted.
 
+  By default, the reporter doesn't include a timestamp with the events, so InfluxDB will assign a timestamp when it receives the event. To include a timestamp with the event, add a `_timestamp` key to the metadata of the event. The value should either be an integer number of nanoseconds or a `DateTime` struct.
+
 ## Run test
 
 Running the tests currently requires [jq](https://stedolan.github.io/jq/). Please make sure you have it installed before running the tests.

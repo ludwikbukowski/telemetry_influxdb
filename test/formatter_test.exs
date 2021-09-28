@@ -77,4 +77,24 @@ defmodule TelemetryInfluxDB.FormatterTest do
     assert Formatter.format([:special, :quote], %{field: "quote\""}) ==
              "special.quote field=\"quote\\\"\""
   end
+
+  test "properly formats with a timestamp" do
+    assert Formatter.format(
+             [:float, :test],
+             %{my_float: 0.31},
+             %{},
+             1_632_811_807_000_000_000
+           ) ==
+             "float.test my_float=0.31 1632811807000000000"
+
+    {:ok, timestamp, _} = DateTime.from_iso8601("2021-09-28T06:50:07Z")
+
+    assert Formatter.format(
+             [:float, :test],
+             %{my_float: 0.31},
+             %{},
+             timestamp
+           ) ==
+             "float.test my_float=0.31 1632811807000000000"
+  end
 end

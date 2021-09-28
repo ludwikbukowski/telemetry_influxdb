@@ -209,24 +209,35 @@ defmodule TelemetryInfluxDBTest do
         event = given_event_spec([:calls, :failed])
         config = make_config(context, %{events: [event]})
         pid = start_reporter(config)
+        timestamp = DateTime.truncate(DateTime.utc_now(), :second)
 
         ## when
-        :telemetry.execute([:calls, :failed], %{
-          "int" => 4,
-          "string_int" => "3",
-          "float" => 0.34,
-          "string" => "random",
-          "boolean" => true
-        })
+        :telemetry.execute(
+          [:calls, :failed],
+          %{
+            "int" => 4,
+            "string_int" => "3",
+            "float" => 0.34,
+            "string" => "random",
+            "boolean" => true
+          },
+          %{"_timestamp" => timestamp}
+        )
 
         ## then
-        assert_reported(context, "calls.failed", %{
-          "int" => 4,
-          "string_int" => "3",
-          "float" => 0.34,
-          "string" => "random",
-          "boolean" => true
-        })
+        assert_reported(
+          context,
+          "calls.failed",
+          %{
+            "int" => 4,
+            "string_int" => "3",
+            "float" => 0.34,
+            "string" => "random",
+            "boolean" => true
+          },
+          %{},
+          timestamp
+        )
 
         ## cleanup
         clear_series(context, "calls.failed")
@@ -549,12 +560,12 @@ defmodule TelemetryInfluxDBTest do
     assert empty_result?(config, res)
   end
 
-  defp assert_reported(context, name, values, tags \\ %{}) do
+  defp assert_reported(context, name, values, tags \\ %{}, timestamp \\ nil) do
     config = make_assertion_config(context)
-    do_assert_reported(config, name, values, tags)
+    do_assert_reported(config, name, values, tags, timestamp)
   end
 
-  defp do_assert_reported(%{version: :v1} = config, name, values, tags) do
+  defp do_assert_reported(%{version: :v1} = config, name, values, tags, timestamp) do
     assert record =
              eventually(fn ->
                res = query(config, name)
@@ -573,12 +584,19 @@ defmodule TelemetryInfluxDBTest do
     map_tag_vals = Map.values(tags)
     all_vals = map_vals ++ map_tag_vals
 
+    if timestamp != nil do
+      {:ok, reported_timestamp, _} =
+        record["values"] |> Enum.at(0) |> Enum.at(0) |> DateTime.from_iso8601()
+
+      assert DateTime.to_unix(timestamp) == DateTime.to_unix(reported_timestamp)
+    end
+
     assert [[_ | tag_and_fields]] = record["values"]
     assert Enum.sort(tag_and_fields) == Enum.sort(all_vals)
     assert_tags(config, tags)
   end
 
-  defp do_assert_reported(%{version: :v2} = config, name, values, tags) do
+  defp do_assert_reported(%{version: :v2} = config, name, values, tags, timestamp) do
     results =
       eventually(fn ->
         res = query(config, name)
@@ -589,6 +607,11 @@ defmodule TelemetryInfluxDBTest do
           res
         end
       end)
+
+    if timestamp != nil do
+      assert DateTime.to_unix(timestamp, :nanosecond) ==
+               Enum.at(results, 0) |> Map.get("_time") |> DateTime.to_unix(:nanosecond)
+    end
 
     assert_tags(config, name, tags, results)
 
