@@ -54,13 +54,14 @@ defmodule TelemetryInfluxDB.EventHandler do
         ) :: :ok
   def handle_event(event, measurements, metadata, config) do
     event_tags = Map.get(metadata, :tags, %{})
+    event_timestamp = Map.get(metadata, "_timestamp", DateTime.utc_now())
     event_metadatas = Map.take(metadata, config.metadata_tag_keys)
 
     tags =
       Map.merge(config.tags, event_tags)
       |> Map.merge(event_metadatas)
 
-    formatted_event = Formatter.format(event, measurements, tags)
+    formatted_event = Formatter.format(event, measurements, tags, event_timestamp)
 
     BatchReporter.get_name(config)
     |> BatchReporter.enqueue_event({formatted_event, config})
