@@ -21,7 +21,7 @@ start_influx_v1: stop_influx_v1
 	-e INFLUXDB_ADMIN_USER=${USERNAME} \
 	-e INFLUXDB_ADMIN_PASSWORD=${PASSWORD} \
 	-v ${PWD}/influxdb-meta.conf:/etc/influxdb/influxdb-meta.conf \
-	--name=${CONTAINER_NAME_V1} influxdb -config /etc/influxdb/influxdb-meta.conf
+	--name=${CONTAINER_NAME_V1} influxdb:1.8 -config /etc/influxdb/influxdb-meta.conf
 
 start_influx_v2: stop_influx_v2
 	docker run -tid -p 9999:8086 \

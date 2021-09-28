@@ -6,8 +6,13 @@ defmodule TelemetryInfluxDB.Formatter do
   @type event_measurements :: map()
 
   @spec format(event_name(), event_measurements, tags()) :: binary
-  def format(event, measurements, tags \\ %{}) do
-    Enum.join(event, ".") <> format_tags(tags) <> format_measurements(measurements)
+  def format(event, measurements, tags \\ %{}, timestamp \\ nil) do
+    line = Enum.join(event, ".") <> format_tags(tags) <> format_measurements(measurements)
+
+    case timestamp do
+      nil -> line
+      _ -> line <> " " <> to_bin(timestamp)
+    end
   end
 
   defp format_measurements(measurements) do
@@ -29,6 +34,7 @@ defmodule TelemetryInfluxDB.Formatter do
   defp to_bin(val) when is_integer(val), do: Integer.to_string(val)
   defp to_bin(val) when is_float(val), do: Float.to_string(val)
   defp to_bin(val) when is_atom(val), do: Atom.to_string(val)
+  defp to_bin(%DateTime{} = val), do: DateTime.to_unix(val, :nanosecond) |> Integer.to_string()
   defp to_bin(val) when is_map(val), do: "Unsupported data type"
   defp to_bin(val), do: escape_special_chars(val)
 
