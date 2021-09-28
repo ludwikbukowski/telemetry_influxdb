@@ -54,7 +54,7 @@ defmodule TelemetryInfluxDB.EventHandler do
         ) :: :ok
   def handle_event(event, measurements, metadata, config) do
     event_tags = Map.get(metadata, :tags, %{})
-    event_timestamp = Map.get(metadata, "_timestamp", DateTime.utc_now())
+    event_timestamp = Map.get(metadata, "_timestamp")
     event_metadatas = Map.take(metadata, config.metadata_tag_keys)
 
     tags =
