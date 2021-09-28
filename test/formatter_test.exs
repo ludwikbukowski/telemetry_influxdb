@@ -87,11 +87,13 @@ defmodule TelemetryInfluxDB.FormatterTest do
            ) ==
              "float.test my_float=0.31 1632811807000000000"
 
+    {:ok, timestamp, _} = DateTime.from_iso8601("2021-09-28T06:50:07Z")
+
     assert Formatter.format(
              [:float, :test],
              %{my_float: 0.31},
              %{},
-             ~U[2021-09-28T06:50:07Z]
+             timestamp
            ) ==
              "float.test my_float=0.31 1632811807000000000"
   end
