@@ -31,8 +31,8 @@ InfluxDB reporter for [Telemetry](https://github.com/beam-telemetry/telemetry)
 
   By default the reporter sends events through UDP to localhost:8089.
 
-  Note that the reporter doesn't aggregate events in-process - it sends updates to InfluxDB
-  whenever a relevant Telemetry event is emitted.
+  Note that the reporter doesn't aggregate events in-process by default - it sends updates to InfluxDB
+  whenever a relevant Telemetry event is emitted. See the `:batch_size` option below to configure this behavior.
 
 ## Run test
 
@@ -60,6 +60,7 @@ Possible options for the reporter:
     Event names should be compatible with `Telemetry` events' format.
     It is also possible to specify an optional list of metadata keys that will be included in the event body and sent to InfluxDB as tags.
     The list of metadata keys should be specified in the event data with the field `metadata_tag_keys`, e.g. `%{name: [:sample, :event, :name], metadata_tag_keys: [:sample_meta, sample_meta2]}`
+ - `:batch_size` - the maximum number of events to send to InfluxDB at one time. (default 1)
  - `:tags` - list of global static tags, that will be attached to each reported event. The format is a map,
     where the key and the value are tag's name and value, respectively.
     Both the tag's name and the value could be atoms or binaries.
@@ -77,9 +78,11 @@ Possible options for the reporter:
 For the HTTP protocol, [worker_pool](https://github.com/inaka/worker_pool) is used for sending requests asynchronously.
 Therefore the HTTP requests are sent in the context of the separate workers' pool, which does not block the client's application
 (it is not sent in the critical path of the client's process).
-The events are sent straightaway without any batching techniques.
+
 On the other hand, UDP packets are sent in the context of the processes that execute the events.
 However, the lightweight nature of UDP should not cause any bottlenecks in such a solution.
+
+Events are sent straightaway without any batching techniques by default. If the `:batch_size` option is set to a value higher than 1, all events received since the previous batch will be sent in the next batch (up to a maximum of `:batch_size` events).
 
 Once the reporter is started, it is attached to specified `Telemetry` events.
 The events are detached when the reporter is shutdown.
