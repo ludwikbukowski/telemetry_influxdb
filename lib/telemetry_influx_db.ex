@@ -89,6 +89,7 @@ defmodule TelemetryInfluxDB do
           | {:token, String.t()}
           | {:events, [event]}
           | {:tags, tags}
+          | {:worker_pool_size, non_neg_integer()}
 
   @type options :: [option]
   @type event :: %{required(:name) => :telemetry.event_name()}
@@ -111,6 +112,7 @@ defmodule TelemetryInfluxDB do
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
       |> Map.put_new(:tags, %{})
+      |> Map.put_new(:worker_pool_size, 3)
       |> Map.put_new(:version, :v1)
       |> validate_required!([:events])
       |> validate_event_fields!()
