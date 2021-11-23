@@ -8,7 +8,7 @@ defmodule TelemetryInfluxDBTest do
   alias TelemetryInfluxDB.Test.InfluxSimpleClient
   alias TelemetryInfluxDB.UDP
 
-  @default_config %{
+  @v1_config %{
     version: :v1,
     db: "myinflux",
     username: "myuser",
@@ -18,11 +18,15 @@ defmodule TelemetryInfluxDBTest do
     port: 8087
   }
 
-  setup_all do
-    token = File.read!(".token")
-
-    {:ok, %{token: token}}
-  end
+  @v2_config %{
+    bucket: "myinflux",
+    host: "localhost",
+    org: "myorg",
+    port: 9999,
+    protocol: :http,
+    token: "mysecrettoken",
+    version: :v2
+  }
 
   describe "Invalid reporter configuration - " do
     test "error log message is displayed for invalid influxdb credentials" do
@@ -101,7 +105,7 @@ defmodule TelemetryInfluxDBTest do
         ArgumentError,
         "for http protocol in v1 you need to specify :db field",
         fn ->
-          @default_config
+          @v1_config
           |> Map.delete(:db)
           |> Map.put(:protocol, :http)
           |> Map.put(:events, [given_event_spec([:missing, :db])])
@@ -110,13 +114,12 @@ defmodule TelemetryInfluxDBTest do
       )
     end
 
-    test "error message is displayed for missing bucket in v2 config", %{token: token} do
+    test "error message is displayed for missing bucket in v2 config" do
       assert_raise(
         ArgumentError,
         "for InfluxDB v2 you need to specify :bucket, :org, and :token fields",
         fn ->
-          @default_config
-          |> be_v2(token)
+          @v2_config
           |> Map.delete(:bucket)
           |> Map.put(:events, [given_event_spec([:missing, :bucket])])
           |> start_reporter()
@@ -124,13 +127,12 @@ defmodule TelemetryInfluxDBTest do
       )
     end
 
-    test "error message is displayed for missing org in v2 config", %{token: token} do
+    test "error message is displayed for missing org in v2 config" do
       assert_raise(
         ArgumentError,
         "for InfluxDB v2 you need to specify :bucket, :org, and :token fields",
         fn ->
-          @default_config
-          |> be_v2(token)
+          @v2_config
           |> Map.delete(:org)
           |> Map.put(:events, [given_event_spec([:missing, :org])])
           |> start_reporter()
@@ -143,7 +145,7 @@ defmodule TelemetryInfluxDBTest do
         ArgumentError,
         "version must be :v1 or :v2",
         fn ->
-          @default_config
+          @v1_config
           |> Map.put(:version, :bad_version)
           |> Map.put(:events, [given_event_spec([:invalid, :version])])
           |> start_reporter()
@@ -151,13 +153,12 @@ defmodule TelemetryInfluxDBTest do
       )
     end
 
-    test "error message is displayed for missing token in v2 config", %{token: token} do
+    test "error message is displayed for missing token in v2 config" do
       assert_raise(
         ArgumentError,
         "for InfluxDB v2 you need to specify :bucket, :org, and :token fields",
         fn ->
-          @default_config
-          |> be_v2(token)
+          @v2_config
           |> Map.delete(:token)
           |> Map.put(:events, [given_event_spec([:missing, :token])])
           |> start_reporter()
@@ -165,13 +166,12 @@ defmodule TelemetryInfluxDBTest do
       )
     end
 
-    test "error message is displayed when specifying udp protocol with v2 config", %{token: token} do
+    test "error message is displayed when specifying udp protocol with v2 config" do
       assert_raise(
         ArgumentError,
         "the udp protocol is not currently supported for InfluxDB v2; please use http instead",
         fn ->
-          @default_config
-          |> be_v2(token)
+          @v2_config
           |> Map.put(:protocol, :udp)
           |> Map.put(:events, [given_event_spec([:v2, :udp])])
           |> start_reporter()
@@ -525,19 +525,6 @@ defmodule TelemetryInfluxDBTest do
     pid
   end
 
-  defp be_v2(config, token) do
-    config
-    |> Map.drop([:db, :username, :password])
-    |> Map.merge(%{
-      version: :v2,
-      protocol: :http,
-      port: 9999,
-      bucket: "myinflux",
-      org: "myorg",
-      token: token
-    })
-  end
-
   defp clear_series(context, name) do
     config = make_assertion_config(context)
     do_clear_series(config, name)
@@ -682,22 +669,20 @@ defmodule TelemetryInfluxDBTest do
   end
 
   defp make_config(%{version: :v1, protocol: :udp}, overrides) do
-    @default_config
+    @v1_config
     |> Map.delete(:db)
     |> Map.merge(%{protocol: :udp, port: 8089})
     |> Map.merge(overrides)
   end
 
   defp make_config(%{version: :v1, protocol: :http}, overrides) do
-    @default_config
+    @v1_config
     |> Map.merge(%{protocol: :http, port: 8087})
     |> Map.merge(overrides)
   end
 
-  defp make_config(%{version: :v2, protocol: :http, token: token}, overrides) do
-    @default_config
-    |> be_v2(token)
-    |> Map.merge(overrides)
+  defp make_config(%{version: :v2, protocol: :http}, overrides) do
+    Map.merge(@v2_config, overrides)
   end
 
   defp wait_processes_to_die(pids) do
