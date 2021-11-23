@@ -57,18 +57,38 @@ defmodule TelemetryInfluxDB.Test.InfluxSimpleClient do
       process_response(HTTPoison.post(path, body, headers))
     end
 
-    def delete_measurement(%{bucket: bucket} = config, measurement) do
-      query = ~s{DROP MEASUREMENT "#{measurement}"}
-      url_encoded = URI.encode_query(%{"q" => query})
+    def delete_measurement(%{bucket: bucket, org: org} = config, measurement) do
+      # We're required to include a time range, so we create one that
+      # should be large enough to capture all of the data while accounting
+      # for any clock sync issues between the client and server.
+      now = NaiveDateTime.utc_now()
+      start = NaiveDateTime.add(now, -3600, :second)
+      stop = NaiveDateTime.add(now, 3600, :second)
+      predicate = "_measurement=\"#{measurement}\""
+      query = URI.encode_query(%{bucket: bucket, org: org})
+
+      body =
+        Jason.encode!(%{
+          predicate: predicate,
+          start: format_time(start),
+          stop: format_time(stop)
+        })
 
       path =
         config.host <>
           ":" <>
           :erlang.integer_to_binary(config.port) <>
-          "/query?db=" <> bucket <> "&" <> url_encoded
+          "/api/v2/delete?" <>
+          query
 
       headers = headers(config)
-      process_response(HTTPoison.get(path, headers))
+      process_response(HTTPoison.post(path, body, headers))
+    end
+
+    defp format_time(%NaiveDateTime{} = time) do
+      time
+      |> DateTime.from_naive!("Etc/UTC")
+      |> DateTime.to_iso8601()
     end
 
     defp process_response({:ok, %HTTPoison.Response{body: body}}) do
