@@ -1,4 +1,7 @@
 defmodule TelemetryInfluxDB do
+  alias TelemetryInfluxDB.BatchReporter
+  alias TelemetryInfluxDB.BatchHandler
+  alias TelemetryInfluxDB.EventHandler
   alias TelemetryInfluxDB.HTTP
   alias TelemetryInfluxDB.UDP
   require Logger
@@ -32,6 +35,7 @@ defmodule TelemetryInfluxDB do
   Options for any InfluxDB version:
      * `:version` - :v1 or :v2. The version of InfluxDB to use; defaults to :v1 if not provided
      * `:reporter_name` - unique name for the reporter. The purpose is to distinguish between different reporters running in the system.
+     * `:batch_size` - maximum number of events to send to InfluxDB in a single batch (default 1: no batching)
      One can run separate independent InfluxDB reporters, with different configurations and goals.
      * `:protocol` - :udp or :http. Which protocol to use for connecting to InfluxDB. Default option is :udp. InfluxDB v2 only supports :http for now.
      * `:host` - host, where InfluxDB is running.
@@ -76,6 +80,7 @@ defmodule TelemetryInfluxDB do
           | {:host, String.t()}
           | {:protocol, atom()}
           | {:reporter_name, binary()}
+          | {:batch_size, non_neg_integer()}
           | {:version, atom()}
           | {:db, String.t()}
           | {:org, String.t()}
@@ -107,6 +112,7 @@ defmodule TelemetryInfluxDB do
       options
       |> Enum.into(%{})
       |> Map.put_new(:reporter_name, "default")
+      |> Map.put_new(:batch_size, 1)
       |> Map.put_new(:protocol, :udp)
       |> Map.put_new(:host, "localhost")
       |> Map.put_new(:port, @default_port)
@@ -116,10 +122,19 @@ defmodule TelemetryInfluxDB do
       |> validate_event_fields!()
       |> validate_protocol!()
       |> validate_version_params!()
+      |> add_publisher()
 
     create_ets(config.reporter_name)
     specs = child_specs(config.protocol, config)
     Supervisor.init(specs, strategy: :one_for_all)
+  end
+
+  defp add_publisher(%{protocol: :http} = config) do
+    Map.put(config, :publisher, HTTP.Publisher)
+  end
+
+  defp add_publisher(%{protocol: :udp} = config) do
+    Map.put(config, :publisher, UDP.Publisher)
   end
 
   defp create_ets(prefix) do
@@ -139,20 +154,27 @@ defmodule TelemetryInfluxDB do
     Supervisor.stop(pid)
   end
 
-  defp child_specs(:http, config), do: http_child_specs(config)
-  defp child_specs(:udp, config), do: udp_child_specs(config)
+  defp child_specs(protocol, config) do
+    publisher_child_specs(protocol, config) ++ common_child_specs(config)
+  end
 
-  defp http_child_specs(config) do
+  defp publisher_child_specs(:http, config), do: [HTTP.Pool.child_spec(config)]
+
+  defp publisher_child_specs(:udp, config),
+    do: [%{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}}]
+
+  defp common_child_specs(config) do
     [
-      HTTP.Pool.child_spec(config),
-      %{id: HTTP.Handler, start: {HTTP.EventHandler, :start_link, [config]}}
+      %{id: EventHandler, start: {EventHandler, :start_link, [config]}},
+      %{id: BatchReporter, start: {BatchReporter, :start_link, [batch_reporter_options(config)]}}
     ]
   end
 
-  defp udp_child_specs(config) do
+  def batch_reporter_options(config) do
     [
-      %{id: UDP.Connector, start: {UDP.Connector, :start_link, [config]}},
-      %{id: UDP.Handler, start: {UDP.EventHandler, :start_link, [config]}}
+      name: BatchReporter.get_name(config),
+      batch_size: config.batch_size,
+      report_fn: &BatchHandler.handle_batch/1
     ]
   end
 

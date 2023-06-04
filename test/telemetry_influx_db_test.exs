@@ -43,9 +43,9 @@ defmodule TelemetryInfluxDBTest do
       pid = start_reporter(config)
       testpid = self()
 
-      :meck.new(TelemetryInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+      :meck.new(TelemetryInfluxDB.HTTP.Publisher, [:unstick, :passthrough])
 
-      :meck.expect(TelemetryInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+      :meck.expect(TelemetryInfluxDB.HTTP.Publisher, :send_event, fn q, b, h ->
         res = :meck.passthrough([q, b, h])
         send(testpid, :event_sent)
         res
@@ -61,7 +61,7 @@ defmodule TelemetryInfluxDBTest do
       ## then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
-      :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
+      :meck.unload(TelemetryInfluxDB.HTTP.Publisher)
     end
 
     test "error log message is displayed for invalid influxdb database" do
@@ -79,9 +79,9 @@ defmodule TelemetryInfluxDBTest do
 
       pid = start_reporter(config)
       testpid = self()
-      :meck.new(TelemetryInfluxDB.HTTP.EventHandler, [:unstick, :passthrough])
+      :meck.new(TelemetryInfluxDB.HTTP.Publisher, [:unstick, :passthrough])
 
-      :meck.expect(TelemetryInfluxDB.HTTP.EventHandler, :send_event, fn q, b, h ->
+      :meck.expect(TelemetryInfluxDB.HTTP.Publisher, :send_event, fn q, b, h ->
         res = :meck.passthrough([q, b, h])
         send(testpid, :event_sent)
         res
@@ -97,7 +97,7 @@ defmodule TelemetryInfluxDBTest do
       # then
       assert log =~ "Failed to push data to InfluxDB. Invalid credentials"
       stop_reporter(pid)
-      :meck.unload(TelemetryInfluxDB.HTTP.EventHandler)
+      :meck.unload(TelemetryInfluxDB.HTTP.Publisher)
     end
 
     test "error log message is displayed for missing db for HTTP" do
