@@ -2,6 +2,7 @@ defmodule TelemetryInfluxDB do
   alias TelemetryInfluxDB.HTTP
   alias TelemetryInfluxDB.UDP
   require Logger
+  use Supervisor
 
   @moduledoc """
   `Telemetry` reporter for InfluxDB compatible events.
@@ -97,6 +98,11 @@ defmodule TelemetryInfluxDB do
 
   @spec start_link(options) :: GenServer.on_start()
   def start_link(options) do
+    Supervisor.start_link(__MODULE__, options)
+  end
+
+  @impl true
+  def init(options) do
     config =
       options
       |> Enum.into(%{})
@@ -113,7 +119,7 @@ defmodule TelemetryInfluxDB do
 
     create_ets(config.reporter_name)
     specs = child_specs(config.protocol, config)
-    Supervisor.start_link(specs, strategy: :one_for_all)
+    Supervisor.init(specs, strategy: :one_for_all)
   end
 
   defp create_ets(prefix) do
