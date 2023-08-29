@@ -38,10 +38,10 @@ defmodule TelemetryInfluxDB.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:telemetry, "~> 0.4.0"},
+      {:telemetry, "~> 1.2"},
       {:jason, "~> 1.0"},
       {:httpoison, "~> 1.5"},
-      {:eventually, git: "https://github.com/distributed-owls/eventually", only: :test},
+      {:liveness, only: :test},
       {:meck, git: "https://github.com/eproxus/meck", only: :test},
       {:dialyxir, "~> 0.5", only: :test, runtime: false},
       {:worker_pool, "~> 4.0.0"},

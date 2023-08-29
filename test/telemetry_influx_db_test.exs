@@ -2,7 +2,7 @@ defmodule TelemetryInfluxDBTest do
   use ExUnit.Case, async: false
 
   import ExUnit.CaptureLog
-  import Eventually
+  import Liveness
 
   alias TelemetryInfluxDB.Test.FluxParser
   alias TelemetryInfluxDB.Test.InfluxSimpleClient
